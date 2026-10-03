@@ -977,3 +977,618 @@ ConflictException
 ↓
 Our application says:
 "this operation violates a business rule"
+
+
+
+
+Yes. The most important thing is to stop thinking of testing as “different annotations” and instead understand **what boundary each test is trying to prove**.
+
+For your Spring Boot project, we currently have **three meaningful levels**:
+
+```text
+                    COMPLETE SYSTEM
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+       Integration Test        Unit Test
+              │                     │
+        real dependencies       fake dependencies
+              │
+              ▼
+        Controller
+              ↓
+          Service
+              ↓
+        Repository
+              ↓
+        PostgreSQL
+```
+
+## 1. Unit Test — "Does this piece of code work correctly?"
+
+### Ultimate purpose
+
+**Test one unit of business logic in isolation.**
+
+In your project:
+
+```text
+CandidateService
+      ↓
+Mock CandidateRepository
+      ↓
+      ❌ Database
+```
+
+We used Mockito to fake the repository.
+
+For example:
+
+```java
+@Test
+void shouldThrowExceptionWhenCandidateDoesNotExist() {
+
+    when(candidateRepository.findById(999L))
+            .thenReturn(Optional.empty());
+
+    assertThrows(
+            ResourceNotFoundException.class,
+            () -> candidateService.getCandidateById(999L)
+    );
+}
+```
+
+We're asking:
+
+> "If the repository tells my service that the candidate doesn't exist, does my service correctly throw `ResourceNotFoundException`?"
+
+We're **not** asking:
+
+- Does PostgreSQL work?
+- Does Spring MVC work?
+- Does JSON work?
+- Does the repository query work?
+
+Those aren't the responsibility of this test.
+
+### Basic purpose
+
+> **Verify the logic of one class/method independently.**
+
+### Ultimate purpose
+
+> **Find bugs in business logic quickly and cheaply without involving external systems.**
+
+---
+
+# 2. Controller / Web Layer Test — "Does HTTP reach my controller correctly?"
+
+Your:
+
+```java
+@WebMvcTest(CandidateController.class)
+```
+
+tests the web layer.
+
+Architecture:
+
+```text
+MockMvc
+   ↓
+Spring MVC
+   ↓
+Real CandidateController
+   ↓
+Mock CandidateService
+   ↓
+❌ Repository
+❌ PostgreSQL
+```
+
+For example:
+
+```java
+mockMvc.perform(
+        post("/candidates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+)
+.andExpect(status().isBadRequest());
+```
+
+We're asking:
+
+> "When a client sends invalid JSON data to this endpoint, does Spring validation reject it correctly?"
+
+Or:
+
+```java
+mockMvc.perform(
+        get("/candidates/1")
+)
+.andExpect(status().isOk());
+```
+
+We're asking:
+
+> "Does `GET /candidates/1` reach the controller and produce the expected HTTP response?"
+
+### Basic purpose
+
+> **Test the HTTP/API contract and controller behavior.**
+
+Things you typically verify:
+
+```text
+URL
+HTTP method
+request body
+JSON mapping
+validation
+status code
+response JSON
+exception → HTTP response
+```
+
+### Ultimate purpose
+
+> **Make sure your API boundary behaves correctly for clients.**
+
+It answers:
+
+> "If a client talks to my API, does the web layer behave correctly?"
+
+---
+
+# 3. Integration Test — "Do the real components work together?"
+
+This is what we just started doing.
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+```
+
+Now:
+
+```text
+MockMvc
+   ↓
+REAL Controller
+   ↓
+REAL Service
+   ↓
+REAL Repository
+   ↓
+REAL Spring Data JDBC
+   ↓
+REAL PostgreSQL
+```
+
+For example:
+
+```java
+Candidate savedCandidate =
+        candidateRepository.save(candidate);
+
+mockMvc.perform(
+        get("/candidates/" + savedCandidate.getId())
+)
+.andExpect(status().isOk());
+```
+
+This proves much more.
+
+We're asking:
+
+> "Can my actual application save a Candidate to PostgreSQL and then retrieve it through the actual HTTP endpoint?"
+
+This catches things such as:
+
+```text
+Java Entity
+     ↓
+Spring Data JDBC
+     ↓
+SQL
+     ↓
+PostgreSQL
+```
+
+mapping problems.
+
+It also catches:
+
+```text
+Flyway
+DataSource
+Repository
+Service
+Controller
+Exception Handler
+JSON serialization
+```
+
+integration problems.
+
+### Basic purpose
+
+> **Test that multiple real components work together correctly.**
+
+### Ultimate purpose
+
+> **Prove that an actual application workflow works end-to-end across component boundaries.**
+
+---
+
+# The easiest mental model
+
+Think about your **car**.
+
+### Unit test
+
+Test the engine separately:
+
+```text
+Engine → Does it work?
+```
+
+You're not testing the wheels, brakes, steering, etc.
+
+---
+
+### Controller test
+
+Test the steering wheel:
+
+```text
+Driver
+  ↓
+Steering wheel
+  ↓
+Does the car receive the steering command correctly?
+```
+
+You don't need the actual engine running.
+
+---
+
+### Integration test
+
+Actually drive the car:
+
+```text
+Driver
+ ↓
+Steering
+ ↓
+Transmission
+ ↓
+Engine
+ ↓
+Wheels
+ ↓
+Road
+```
+
+You're checking whether the **parts work together**.
+
+---
+
+# In your Job Application API
+
+Let's take:
+
+```text
+POST /candidates
+```
+
+### Unit test
+
+```text
+CandidateService
+       ↓
+Mock Repository
+```
+
+Question:
+
+> Does `createCandidate()` correctly construct and save a Candidate?
+
+---
+
+### Controller test
+
+```text
+HTTP POST
+   ↓
+MockMvc
+   ↓
+CandidateController
+   ↓
+Mock Service
+```
+
+Question:
+
+> Does the API correctly handle the HTTP request, validation, and response?
+
+---
+
+### Integration test
+
+```text
+HTTP POST
+   ↓
+MockMvc
+   ↓
+CandidateController
+   ↓
+CandidateService
+   ↓
+CandidateRepository
+   ↓
+PostgreSQL
+```
+
+Question:
+
+> Does the **actual application workflow** work?
+
+---
+
+# Why do we need all three?
+
+Because each catches a different class of bug.
+
+Imagine this code:
+
+```java
+candidateRepository.save(candidate);
+```
+
+### Unit test
+
+Could pass because Repository is mocked:
+
+```text
+Mock Repository
+     ↓
+"Yeah, I'll return the candidate."
+```
+
+But your actual repository might have a bad DB mapping.
+
+Unit test won't know.
+
+---
+
+### Controller test
+
+Could also pass:
+
+```text
+POST /candidates
+     ↓
+Controller
+     ↓
+Mock Service
+     ↓
+"Here's a candidate."
+```
+
+Still doesn't touch PostgreSQL.
+
+---
+
+### Integration test
+
+Now:
+
+```text
+POST
+ ↓
+Controller
+ ↓
+Service
+ ↓
+Repository
+ ↓
+PostgreSQL
+```
+
+If your entity says:
+
+```java
+@Column("resume_url")
+```
+
+but your DB actually has:
+
+```text
+resume_link
+```
+
+the integration test can catch it.
+
+---
+
+# The trade-off
+
+There is a very important relationship:
+
+| Test | Speed | Isolation | Realism |
+|---|---:|---:|---:|
+| **Unit** | Very high | Very high | Low |
+| **Controller/Web** | High | High | Medium |
+| **Integration** | Lower | Low | High |
+
+So you don't want to replace all unit tests with integration tests.
+
+You use each where it makes sense.
+
+---
+
+# The testing pyramid
+
+The overall philosophy is roughly:
+
+```text
+                 /\
+                /  \
+               /    \
+              / E2E  \
+             /--------\
+            /          \
+           / Integration\
+          /--------------\
+         /                \
+        /   Unit Tests     \
+       /____________________\
+```
+
+More specifically for your current project:
+
+```text
+                Few
+                 ▲
+                 │
+          Integration
+             Tests
+                 │
+        Controller Tests
+                 │
+          Many Unit Tests
+                 ▼
+```
+
+Why?
+
+Because unit tests are:
+
+- fast
+- cheap
+- isolated
+- easy to diagnose
+
+Integration tests are:
+
+- slower
+- more expensive
+- dependent on infrastructure
+- broader
+- but much more realistic
+
+---
+
+# And one more important distinction
+
+There is a difference between **what you're testing** and **what tool you're using**.
+
+For example:
+
+### JUnit
+
+JUnit is the **testing framework**.
+
+It gives you:
+
+```java
+@Test
+assertEquals(...)
+assertThrows(...)
+```
+
+Basically:
+
+> "Run this test and tell me whether it passes."
+
+---
+
+### Mockito
+
+Mockito is for **creating fake dependencies**.
+
+```java
+CandidateRepository repository =
+        Mockito.mock(CandidateRepository.class);
+```
+
+Basically:
+
+> "Don't give me the real repository. Give me a fake one that I control."
+
+---
+
+### MockMvc
+
+MockMvc is for **simulating HTTP requests**.
+
+```java
+mockMvc.perform(
+    get("/candidates/1")
+)
+```
+
+Basically:
+
+> "Pretend a client sent this HTTP request to my Spring MVC application."
+
+---
+
+### `@SpringBootTest`
+
+This tells Spring:
+
+> "Start the real application context."
+
+---
+
+### `@WebMvcTest`
+
+This tells Spring:
+
+> "I only want the web/controller portion of the application."
+
+---
+
+# Your project, summarized
+
+You can remember it like this:
+
+```text
+UNIT TEST
+─────────
+"Is my code logic correct?"
+
+Mockito
+   ↓
+isolate class
+
+
+CONTROLLER TEST
+───────────────
+"Does my HTTP API behave correctly?"
+
+MockMvc
+   ↓
+test HTTP/controller
+
+
+INTEGRATION TEST
+────────────────
+"Do my real components work together?"
+
+SpringBootTest
+   ↓
+real application
+   ↓
+real PostgreSQL
+```
+
+And the **ultimate purpose of testing as a whole** is:
+
+> **Give you confidence that changes to the code haven't broken the behavior the system is supposed to provide.**
+
+That's the mental model you should carry into Spring Boot—and it maps almost perfectly to how you'd test a Go application with `testing`, mocked dependencies, `httptest`, and integration tests.

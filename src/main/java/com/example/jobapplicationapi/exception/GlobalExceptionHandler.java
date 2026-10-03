@@ -1,6 +1,8 @@
 package com.example.jobapplicationapi.exception;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.relational.core.conversion.DbActionExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -12,15 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
-// This class contains exception-handling methods for my REST controllers.
-//
-// If an exception occurs while processing a REST request,
-// Spring looks for a matching @ExceptionHandler method here.
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    // If MethodArgumentNotValidException occurs,
-    // Spring calls this method and passes the exception object to it.
     public ResponseEntity<ApiErrorResponse> handleValidationException(
             MethodArgumentNotValidException exception) {
 
@@ -47,6 +43,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFound(
             ResourceNotFoundException exception) {
@@ -61,6 +58,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(response);
     }
+
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleConflict(
@@ -77,13 +75,38 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleUnexpectedException(
-            Exception exception) {
 
-        // Log the actual exception for debugging.
-        // We do not expose its details to the client.
-        exception.printStackTrace();
+    @ExceptionHandler(DbActionExecutionException.class)
+    public ResponseEntity<ApiErrorResponse> handleDatabaseException(
+            DbActionExecutionException exception) {
+
+        Throwable cause = exception.getCause();
+
+        if (cause instanceof DuplicateKeyException) {
+
+            ApiErrorResponse response =
+                    new ApiErrorResponse(
+                            HttpStatus.CONFLICT.value(),
+                            "Data conflict"
+                    );
+
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(response);
+        }
+
+        if (cause instanceof DataIntegrityViolationException) {
+
+            ApiErrorResponse response =
+                    new ApiErrorResponse(
+                            HttpStatus.CONFLICT.value(),
+                            "Data conflict"
+                    );
+
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(response);
+        }
 
         ApiErrorResponse response =
                 new ApiErrorResponse(
@@ -95,6 +118,8 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(response);
     }
+
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException exception) {
@@ -102,11 +127,29 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response =
                 new ApiErrorResponse(
                         HttpStatus.CONFLICT.value(),
-                        "Data Conflict"
+                        "Data conflict"
                 );
 
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
+                .body(response);
+    }
+
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleUnexpectedException(
+            Exception exception) {
+
+        exception.printStackTrace();
+
+        ApiErrorResponse response =
+                new ApiErrorResponse(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "Internal server error"
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(response);
     }
 }

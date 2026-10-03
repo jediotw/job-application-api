@@ -1,5 +1,7 @@
 package com.example.jobapplicationapi.candidate.service;
 
+import com.example.jobapplicationapi.candidate.dto.CreateCandidateRequest;
+import com.example.jobapplicationapi.candidate.dto.UpdateCandidateRequest;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.repository.CandidateRepository;
 import org.springframework.stereotype.Service;
@@ -40,18 +42,22 @@ public class CandidateService {
 
         throw new RuntimeException("Candidate not found");
     }
-    public Candidate createCandidate(Candidate candidate) {
+    public Candidate createCandidate(CreateCandidateRequest request) {
+
+        Candidate candidate = new Candidate();
+
+        candidate.setName(request.getName());
+        candidate.setEmail(request.getEmail());
+        candidate.setPhone(request.getPhone());
+        candidate.setResume_url(request.getResumeUrl());
 
         Candidate savedCandidate = candidateRepository.save(candidate);
 
-        Optional<Candidate> result = candidateRepository.findById(savedCandidate.getId());
-
-        if (result.isPresent()) {
-            return result.get();
-        }
-
-        throw new RuntimeException("Candidate was not found after creation");
+        return savedCandidate;
     }
+
+
+
     public void deleteCandidate(Long id) {
 
         boolean exists = candidateRepository.existsById(id);
@@ -62,7 +68,9 @@ public class CandidateService {
 
         candidateRepository.deleteById(id);
     }
-    public Candidate updateCandidate(Long id, Candidate candidate) {
+    public Candidate updateCandidate(
+            Long id,
+            UpdateCandidateRequest request) {
 
         Optional<Candidate> result = candidateRepository.findById(id);
 
@@ -72,10 +80,10 @@ public class CandidateService {
 
         Candidate existingCandidate = result.get();
 
-        existingCandidate.setName(candidate.getName());
-        existingCandidate.setEmail(candidate.getEmail());
-        existingCandidate.setPhone(candidate.getPhone());
-        existingCandidate.setResume_url(candidate.getResume_url());
+        existingCandidate.setName(request.getName());
+        existingCandidate.setEmail(request.getEmail());
+        existingCandidate.setPhone(request.getPhone());
+        existingCandidate.setResume_url(request.getResumeUrl());
 
         Candidate savedCandidate = candidateRepository.save(existingCandidate);
 

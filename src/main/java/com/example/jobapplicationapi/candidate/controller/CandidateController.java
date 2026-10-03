@@ -1,5 +1,7 @@
 package com.example.jobapplicationapi.candidate.controller;
 
+import com.example.jobapplicationapi.candidate.dto.CreateCandidateRequest;
+import com.example.jobapplicationapi.candidate.dto.UpdateCandidateRequest;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.service.CandidateService;
 import org.springframework.web.bind.annotation.*;
@@ -23,22 +25,29 @@ public class CandidateController {
     public Candidate getCandidateById(@PathVariable Long id) {
         return candidateService.getCandidateById(id);
     }
+
     @PostMapping
-    public Candidate createCandidate(@RequestBody Candidate candidate) {
-        return candidateService.createCandidate(candidate);
+    public Candidate createCandidate(
+            @RequestBody CreateCandidateRequest request) {
+
+        Candidate savedCandidate = candidateService.createCandidate(request);
+
+        return savedCandidate;
     }
+
     @DeleteMapping("/{id}")
     public void deleteCandidate(@PathVariable Long id) {
 
         candidateService.deleteCandidate(id);
     }
+
     @PutMapping("/{id}")
     public Candidate updateCandidate(
             @PathVariable Long id,
-            @RequestBody Candidate candidate) {
+            @RequestBody UpdateCandidateRequest request) {
 
         Candidate updatedCandidate =
-                candidateService.updateCandidate(id, candidate);
+                candidateService.updateCandidate(id, request);
 
         return updatedCandidate;
     }

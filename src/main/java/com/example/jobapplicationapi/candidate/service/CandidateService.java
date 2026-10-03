@@ -49,7 +49,7 @@ public class CandidateService {
         candidate.setName(request.getName());
         candidate.setEmail(request.getEmail());
         candidate.setPhone(request.getPhone());
-        candidate.setResume_url(request.getResumeUrl());
+        candidate.setResumeUrl(request.getResumeUrl());
 
         Candidate savedCandidate = candidateRepository.save(candidate);
 
@@ -83,7 +83,7 @@ public class CandidateService {
         existingCandidate.setName(request.getName());
         existingCandidate.setEmail(request.getEmail());
         existingCandidate.setPhone(request.getPhone());
-        existingCandidate.setResume_url(request.getResumeUrl());
+        existingCandidate.setResumeUrl(request.getResumeUrl());
 
         Candidate savedCandidate = candidateRepository.save(existingCandidate);
 

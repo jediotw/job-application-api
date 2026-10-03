@@ -4,6 +4,7 @@ import com.example.jobapplicationapi.candidate.dto.CreateCandidateRequest;
 import com.example.jobapplicationapi.candidate.dto.UpdateCandidateRequest;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.service.CandidateService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,7 +29,7 @@ public class CandidateController {
 
     @PostMapping
     public Candidate createCandidate(
-            @RequestBody CreateCandidateRequest request) {
+             @Valid  @RequestBody CreateCandidateRequest request) {
 
         Candidate savedCandidate = candidateService.createCandidate(request);
 

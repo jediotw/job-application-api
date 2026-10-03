@@ -1,9 +1,12 @@
 package com.example.jobapplicationapi.candidate.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class UpdateCandidateRequest {
     private String name;
     private String email;
     private String phone;
+    @JsonProperty("resume_url")
     private String resumeUrl;
 
     public UpdateCandidateRequest() {

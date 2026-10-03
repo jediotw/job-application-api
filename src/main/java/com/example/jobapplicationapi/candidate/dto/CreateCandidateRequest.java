@@ -1,9 +1,18 @@
 package com.example.jobapplicationapi.candidate.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public class CreateCandidateRequest {
+    @NotBlank
     private String name;
+    @NotBlank
+    @Email
     private String email;
     private String phone;
+    @JsonProperty("resume_url")
     private String resumeUrl;
 
     public CreateCandidateRequest() {

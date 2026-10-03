@@ -523,3 +523,350 @@ Entity
 Repository
 ↓
 Database
+
+
+# Java / Spring Boot: JSON, DTO, Entity, and Database Mapping
+
+## Core mental model
+
+```text
+JSON
+  ↓ Jackson
+Request DTO
+  ↓ service/application mapping
+Entity
+  ↓ Spring Data JDBC
+PostgreSQL
+```
+
+There are **different mappings at different boundaries**.
+
+---
+
+## 1. JSON → DTO
+
+JSON:
+
+```json
+{
+  "name": "Vikas Kumar",
+  "email": "vikas@example.com",
+  "resume_url": "https://example.com/vikas-resume"
+}
+```
+
+DTO:
+
+```java
+public class CreateCandidateRequest {
+
+    private String name;
+    private String email;
+    private String resumeUrl;
+}
+```
+
+The names differ:
+
+```text
+JSON                    Java DTO
+--------------------------------
+resume_url        →     resumeUrl
+```
+
+Jackson converts JSON into the DTO.
+
+### `@JsonProperty`
+
+```java
+@JsonProperty("resume_url")
+private String resumeUrl;
+```
+
+This tells Jackson:
+
+> JSON field `resume_url` maps to Java property `resumeUrl`.
+
+`@JsonProperty` is about **JSON ↔ Java**. It has nothing to do with the database.
+
+---
+
+## 2. DTO → Entity
+
+The DTO and database entity are separate objects.
+
+The service maps between them:
+
+```java
+Candidate candidate = new Candidate();
+
+candidate.setName(request.getName());
+candidate.setEmail(request.getEmail());
+candidate.setPhone(request.getPhone());
+candidate.setResumeUrl(request.getResumeUrl());
+```
+
+Flow:
+
+```text
+CreateCandidateRequest
+        ↓
+      Service
+        ↓
+     Candidate
+```
+
+This separation prevents clients from directly controlling database fields such as:
+
+```text
+id
+createdAt
+updatedAt
+```
+
+---
+
+## 3. Entity → Database
+
+Java entity:
+
+```java
+private String resumeUrl;
+```
+
+PostgreSQL column:
+
+```text
+resume_url
+```
+
+Explicit mapping:
+
+```java
+@Column("resume_url")
+private String resumeUrl;
+```
+
+This tells Spring Data JDBC:
+
+> Java property `resumeUrl` is stored in database column `resume_url`.
+
+`@Column` is about **Java Entity ↔ Database**. It has nothing to do with JSON.
+
+---
+
+## 4. The two annotations solve different problems
+
+| Annotation | Boundary | Purpose |
+|---|---|---|
+| `@JsonProperty("resume_url")` | JSON → Java | Maps JSON field to Java property |
+| `@Column("resume_url")` | Java → Database | Maps Java property to DB column |
+
+They may contain the same string, but they operate at different layers.
+
+---
+
+## 5. Complete `resume_url` flow
+
+Client sends:
+
+```json
+{
+  "resume_url": "https://example.com/resume"
+}
+```
+
+### JSON → DTO
+
+```text
+"resume_url"
+     ↓
+@JsonProperty("resume_url")
+     ↓
+CreateCandidateRequest.resumeUrl
+```
+
+### DTO → Entity
+
+```java
+candidate.setResumeUrl(request.getResumeUrl());
+```
+
+### Entity → Database
+
+```text
+Candidate.resumeUrl
+      ↓
+@Column("resume_url")
+      ↓
+candidates.resume_url
+```
+
+Complete flow:
+
+```text
+JSON
+"resume_url"
+      │
+      │ @JsonProperty
+      ▼
+DTO
+resumeUrl
+      │
+      │ service mapping
+      ▼
+Entity
+resumeUrl
+      │
+      │ @Column
+      ▼
+PostgreSQL
+resume_url
+```
+
+---
+
+## 6. Go mental model
+
+In Go, a JSON tag solves the JSON mapping problem:
+
+```go
+type CreateCandidateRequest struct {
+    Name      string `json:"name"`
+    Email     string `json:"email"`
+    ResumeURL string `json:"resume_url"`
+}
+```
+
+This is conceptually similar to:
+
+```java
+@JsonProperty("resume_url")
+private String resumeUrl;
+```
+
+The database mapping is a separate concern.
+
+So think:
+
+```text
+JSON mapping
+    ↓
+request DTO
+    ↓
+application mapping
+    ↓
+entity
+    ↓
+database mapping
+    ↓
+SQL table
+```
+
+---
+
+## 7. Why use `@Column`?
+
+Our database uses snake_case:
+
+```text
+resume_url
+created_at
+updated_at
+```
+
+Java uses camelCase:
+
+```text
+resumeUrl
+createdAt
+updatedAt
+```
+
+Explicit mapping makes the database relationship obvious:
+
+```java
+@Column("resume_url")
+private String resumeUrl;
+
+@Column("created_at")
+private LocalDateTime createdAt;
+
+@Column("updated_at")
+private LocalDateTime updatedAt;
+```
+
+---
+
+## 8. Why use `@JsonProperty`?
+
+Our API request uses:
+
+```json
+"resume_url"
+```
+
+while Java uses:
+
+```java
+resumeUrl
+```
+
+So we explicitly tell Jackson:
+
+```java
+@JsonProperty("resume_url")
+private String resumeUrl;
+```
+
+A global Jackson `snake_case` naming strategy is another option, but explicit annotations are useful when you want a mapping to be obvious or override the default convention.
+
+---
+
+## 9. Final mental model
+
+Always ask:
+
+> **Which two worlds am I mapping between?**
+
+### JSON ↔ Java DTO
+
+```java
+@JsonProperty
+```
+
+### DTO ↔ Entity
+
+Application/service code:
+
+```java
+candidate.setResumeUrl(request.getResumeUrl());
+```
+
+### Java Entity ↔ Database
+
+```java
+@Column
+```
+
+A single field can therefore have multiple representations:
+
+```text
+HTTP JSON
+    │
+    │ "resume_url"
+    ▼
+Request DTO
+    │
+    │ resumeUrl
+    ▼
+Entity
+    │
+    │ resume_url
+    ▼
+PostgreSQL
+```
+
+## One-line rule
+
+> **`@JsonProperty` is for JSON mapping. `@Column` is for database mapping. DTO → Entity mapping is application/service code.**

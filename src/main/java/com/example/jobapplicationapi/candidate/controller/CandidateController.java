@@ -43,9 +43,7 @@ public class CandidateController {
     }
 
     @PutMapping("/{id}")
-    public Candidate updateCandidate(
-            @PathVariable Long id,
-            @RequestBody UpdateCandidateRequest request) {
+    public Candidate updateCandidate( @PathVariable Long id, @Valid @RequestBody UpdateCandidateRequest request) {
 
         Candidate updatedCandidate =
                 candidateService.updateCandidate(id, request);

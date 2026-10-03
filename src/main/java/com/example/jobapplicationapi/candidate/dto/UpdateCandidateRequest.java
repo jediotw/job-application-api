@@ -1,9 +1,14 @@
 package com.example.jobapplicationapi.candidate.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 public class UpdateCandidateRequest {
+    @NotBlank
     private String name;
+    @NotBlank
+    @Email
     private String email;
     private String phone;
     @JsonProperty("resume_url")

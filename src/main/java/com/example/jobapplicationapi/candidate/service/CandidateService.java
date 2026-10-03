@@ -4,6 +4,7 @@ import com.example.jobapplicationapi.candidate.dto.CreateCandidateRequest;
 import com.example.jobapplicationapi.candidate.dto.UpdateCandidateRequest;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.repository.CandidateRepository;
+import com.example.jobapplicationapi.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ public class CandidateService {
             return result.get();
         }
 
-        throw new RuntimeException("Candidate not found");
+        throw new ResourceNotFoundException("Candidate not found");
     }
     public Candidate createCandidate(CreateCandidateRequest request) {
 
@@ -63,19 +64,17 @@ public class CandidateService {
         boolean exists = candidateRepository.existsById(id);
 
         if (!exists) {
-            throw new RuntimeException("Candidate not found");
+            throw new ResourceNotFoundException("Candidate not found");
         }
 
         candidateRepository.deleteById(id);
     }
-    public Candidate updateCandidate(
-            Long id,
-            UpdateCandidateRequest request) {
+    public Candidate updateCandidate(Long id, UpdateCandidateRequest request) {
 
         Optional<Candidate> result = candidateRepository.findById(id);
 
         if (!result.isPresent()) {
-            throw new RuntimeException("Candidate not found");
+            throw new ResourceNotFoundException("Candidate not found");
         }
 
         Candidate existingCandidate = result.get();

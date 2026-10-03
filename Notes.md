@@ -870,3 +870,110 @@ PostgreSQL
 ## One-line rule
 
 > **`@JsonProperty` is for JSON mapping. `@Column` is for database mapping. DTO → Entity mapping is application/service code.**
+# Global error handler common type
+GlobalExceptionHandler
+│
+├── MethodArgumentNotValidException
+│       → 400
+│
+├── ResourceNotFoundException
+│       → 404
+│
+├── DuplicateEmailException
+│       → 409
+│
+└── Exception
+→ 500
+
+CandidateNotFoundException ─┐
+CompanyNotFoundException ───┼──→ ResourceNotFoundException handler → 404
+JobNotFoundException ───────┘
+```
+GlobalExceptionHandler
+│
+├── MethodArgumentNotValidException
+│       │
+│       ├── getBindingResult()
+│       ├── getFieldErrors()
+│       ├── getField()
+│       └── getDefaultMessage()
+│                ↓
+│              400
+│
+├── ResourceNotFoundException
+│       │
+│       └── getMessage()
+│                ↓
+│              404
+│
+├── DuplicateEmailException
+│       │
+│       └── getMessage()
+│                ↓
+│              409
+│
+└── Exception
+│
+├── getMessage() / getCause() → logging
+│
+└── generic response
+↓
+500
+```
+
+| Exception | Information we need | Important methods | HTTP | Response |
+|---|---|---|---:|---|
+| `MethodArgumentNotValidException` | Validation failures | `getBindingResult()` → `getFieldErrors()` → `getField()`, `getDefaultMessage()` | **400** | status + message + errors |
+| `ResourceNotFoundException` | Resource not found | `getMessage()` | **404** | status + message |
+| `DuplicateEmailException` | Email conflict | `getMessage()` | **409** | status + message |
+| `Exception` | Unexpected internal failure | `getMessage()` / `getCause()` for logging | **500** | status + generic message |
+
+
+```
+Exception
+↓
+GlobalExceptionHandler
+│
+├── MethodArgumentNotValidException
+│       → 400
+│
+├── ResourceNotFoundException
+│       → 404
+│
+├── ConflictException
+│       → 409
+│
+├── DataIntegrityViolationException
+│       → 409
+│
+└── Exception
+→ 500
+↓
+ApiErrorResponse
+```
+
+MethodArgumentNotValidException
+→ 400 Validation failed
+
+ResourceNotFoundException
+→ 404 Candidate not found
+
+ConflictException
+→ 409 Business conflict
+
+DataIntegrityViolationException
+→ 409 Data conflict
+
+Exception
+→ 500 Internal server error
+
+DataIntegrityViolationException
+↓
+Database says:
+"this operation violates a DB constraint"
+
+
+ConflictException
+↓
+Our application says:
+"this operation violates a business rule"

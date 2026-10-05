@@ -2,6 +2,7 @@ package com.example.jobapplicationapi.company.model;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -9,19 +10,24 @@ import java.time.LocalDateTime;
 
 @Table("companies")
 public class Company {
+
     @Id
     private Long id;
+
     private String name;
+
     private String cin;
+
     private String website;
 
-
     private String description;
+
     @Column("created_at")
     @CreatedDate
     private LocalDateTime createdAt;
+
     @Column("updated_at")
-    @CreatedDate
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
     public Company() {
@@ -67,5 +73,19 @@ public class Company {
         this.description = description;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

@@ -1592,3 +1592,509 @@ And the **ultimate purpose of testing as a whole** is:
 > **Give you confidence that changes to the code haven't broken the behavior the system is supposed to provide.**
 
 That's the mental model you should carry into Spring Boot—and it maps almost perfectly to how you'd test a Go application with `testing`, mocked dependencies, `httptest`, and integration tests.
+
+
+
+```
+                    Spring Boot
+                        │
+                        ▼
+                 Component Scan
+                        │
+        ┌───────────────┼────────────────┐
+        ▼               ▼                ▼
+ CandidateController CompanyController JobController
+        │               │                │
+        ▼               ▼                ▼
+ CandidateService   CompanyService    JobService
+        │               │                │
+        ▼               ▼                ▼
+ CandidateRepo      CompanyRepo       JobRepo
+        │               │                │
+        └───────────────┼────────────────┘
+                        ▼
+                    PostgreSQL
+```
+
+# what is component scan by spring boot?
+Exactly. This is an important Spring concept. **Component scanning is basically how Spring discovers the classes that it should create and manage as Beans.**
+
+## 1. What does `@SpringBootApplication` do?
+
+Our main class is:
+
+```java
+@SpringBootApplication
+public class JobApplicationApiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(
+                JobApplicationApiApplication.class,
+                args
+        );
+    }
+}
+```
+
+`@SpringBootApplication` is a combination of several Spring annotations. The important one for your question is:
+
+```java
+@ComponentScan
+```
+
+Conceptually:
+
+```text
+@SpringBootApplication
+        │
+        ├── configuration
+        ├── auto-configuration
+        │
+        └── component scanning
+                  │
+                  ▼
+           find Spring components
+```
+
+---
+
+# 2. What does component scanning actually do?
+
+Your main class is here:
+
+```text
+com.example.jobapplicationapi
+└── JobApplicationApiApplication.java
+```
+
+Spring starts scanning from:
+
+```text
+com.example.jobapplicationapi
+```
+
+and its subpackages.
+
+So it discovers:
+
+```text
+com.example.jobapplicationapi
+│
+├── candidate
+│   ├── controller
+│   ├── service
+│   ├── repository
+│   └── ...
+│
+├── company
+│   ├── controller
+│   ├── service
+│   ├── repository
+│   └── ...
+│
+├── job
+│   ├── controller
+│   ├── service
+│   ├── repository
+│   └── ...
+│
+└── exception
+```
+
+**But Spring doesn't make every Java class a Bean.**
+
+It looks for classes/interfaces that Spring knows should be managed.
+
+---
+
+# 3. What are our components?
+
+We currently have several different kinds.
+
+## `@RestController`
+
+For example:
+
+```java
+@RestController
+public class CandidateController {
+```
+
+This tells Spring:
+
+> This is a web controller. Create and manage it as a Spring Bean.
+
+So:
+
+```text
+CandidateController
+CompanyController
+JobController
+```
+
+are Spring-managed components.
+
+---
+
+## `@Service`
+
+For example:
+
+```java
+@Service
+public class CandidateService {
+```
+
+Spring discovers it and creates the service object.
+
+We have:
+
+```text
+CandidateService
+CompanyService
+JobService
+```
+
+So:
+
+```text
+@Service
+     ↓
+Spring Bean
+```
+
+---
+
+## `@Configuration`
+
+We have:
+
+```java
+@Configuration
+@EnableJdbcAuditing
+public class JdbcAuditingConfig {
+}
+```
+
+That's also a Spring-managed configuration component.
+
+It tells Spring how to configure something.
+
+---
+
+## Repository
+
+This one is interesting.
+
+We have:
+
+```java
+public interface CandidateRepository
+        extends CrudRepository<Candidate, Long> {
+}
+```
+
+There is **no `@Repository` annotation** on our interface.
+
+Yet Spring creates a repository Bean for us.
+
+Why?
+
+Because **Spring Data JDBC detects repository interfaces and creates the implementation/proxy automatically.**
+
+Conceptually:
+
+```text
+CandidateRepository
+       │
+       ▼
+Spring Data JDBC
+       │
+       ▼
+generated implementation/proxy
+       │
+       ▼
+Spring Bean
+```
+
+So you don't write:
+
+```java
+class CandidateRepositoryImpl
+```
+
+yourself.
+
+Spring Data does the work.
+
+---
+
+# 4. What about `Company.java` and `Job.java`?
+
+This is an important distinction.
+
+We have:
+
+```java
+@Table("companies")
+public class Company {
+```
+
+and:
+
+```java
+@Table("jobs")
+public class Job {
+```
+
+These are **not Spring components** in the same sense.
+
+They are domain/data-mapping classes.
+
+`@Table` tells Spring Data JDBC:
+
+> This class represents a database table.
+
+It does **not** mean:
+
+> Create one `Company` object at application startup and put it into the Spring container.
+
+Similarly, our DTOs:
+
+```text
+CreateCompanyRequest
+UpdateCompanyRequest
+CreateJobRequest
+UpdateJobRequest
+```
+
+are not Spring Beans.
+
+They are just request objects created when HTTP requests arrive.
+
+---
+
+# 5. Think of the Spring container
+
+This is the mental model I want you to keep.
+
+When your application starts:
+
+```text
+SpringApplication.run()
+        │
+        ▼
+Spring Container
+        │
+        ├── CandidateController
+        ├── CandidateService
+        ├── CandidateRepository
+        │
+        ├── CompanyController
+        ├── CompanyService
+        ├── CompanyRepository
+        │
+        ├── JobController
+        ├── JobService
+        ├── JobRepository
+        │
+        └── JdbcAuditingConfig
+```
+
+The container manages these objects.
+
+This is what **Dependency Injection** depends on.
+
+---
+
+# 6. Look at our `JobService`
+
+We wrote:
+
+```java
+@Service
+public class JobService {
+
+    private final JobRepository jobRepository;
+    private final CompanyRepository companyRepository;
+
+    public JobService(
+            JobRepository jobRepository,
+            CompanyRepository companyRepository) {
+
+        this.jobRepository = jobRepository;
+        this.companyRepository = companyRepository;
+    }
+}
+```
+
+We didn't do:
+
+```java
+new JobRepository()
+```
+
+and we didn't do:
+
+```java
+new CompanyRepository()
+```
+
+Instead:
+
+```text
+Spring starts
+     │
+     ▼
+Component scanning
+     │
+     ▼
+Find JobService
+     │
+     ▼
+JobService needs:
+ ├── JobRepository
+ └── CompanyRepository
+     │
+     ▼
+Spring finds/creates those Beans
+     │
+     ▼
+Spring calls JobService constructor
+     │
+     ├── passes JobRepository
+     └── passes CompanyRepository
+```
+
+That's **Dependency Injection**.
+
+---
+
+# 7. Compare this with your Go mental model
+
+In Go/Fiber, you might manually construct things:
+
+```go
+repo := NewJobRepository(db)
+
+service := NewJobService(
+    repo,
+    companyRepo,
+)
+
+handler := NewJobHandler(service)
+
+app.Post("/jobs", handler.Create)
+```
+
+You're explicitly building the dependency graph.
+
+Spring moves much of that responsibility into the container:
+
+```text
+Spring Container
+
+JobController
+     ↓
+JobService
+     ↓
+ ┌───────────────┐
+ │               │
+ ▼               ▼
+JobRepository  CompanyRepository
+```
+
+You declare the dependencies:
+
+```java
+public JobService(
+    JobRepository jobRepository,
+    CompanyRepository companyRepository
+)
+```
+
+and Spring resolves them.
+
+**This is one of the biggest mental shifts when moving from Go to Spring.**
+
+---
+
+## 8. The simplest definition
+
+If you remember only one thing:
+
+> **Component scanning = Spring searching your application's packages for classes that are supposed to be managed by the Spring container.**
+
+And:
+
+> **A Spring Bean = an object whose lifecycle/dependencies are managed by Spring.**
+
+For our project:
+
+| Class | Spring-managed? | Why |
+|---|---|---|
+| `CandidateController` | ✅ | `@RestController` |
+| `CompanyController` | ✅ | `@RestController` |
+| `JobController` | ✅ | `@RestController` |
+| `CandidateService` | ✅ | `@Service` |
+| `CompanyService` | ✅ | `@Service` |
+| `JobService` | ✅ | `@Service` |
+| `CandidateRepository` | ✅ | Spring Data creates it |
+| `CompanyRepository` | ✅ | Spring Data creates it |
+| `JobRepository` | ✅ | Spring Data creates it |
+| `JdbcAuditingConfig` | ✅ | `@Configuration` |
+| `Candidate` | ❌* | Entity/data-mapping class |
+| `Company` | ❌* | Entity/data-mapping class |
+| `Job` | ❌* | Entity/data-mapping class |
+| `CreateJobRequest` | ❌ | DTO |
+| `UpdateJobRequest` | ❌ | DTO |
+
+\*They're managed/mapped by Spring Data **when used**, but they're not ordinary application-level Spring Beans sitting in the container.
+
+you don't need to manually register the controllers, services, or repositories in the main class.
+Our main class can remain this simple:
+package com.example.jobapplicationapi;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class JobApplicationApiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(
+                JobApplicationApiApplication.class,
+                args
+        );
+    }
+}
+
+Why?
+Because this:
+@SpringBootApplication
+
+already tells Spring to:
+Start application
+↓
+Configure Spring
+↓
+Component scan
+↓
+Find Controllers / Services / Configurations
+↓
+Find Spring Data repositories
+↓
+Create/manage Beans
+↓
+Wire dependencies
+
+So we don't do this:
+new CandidateController(...)
+new CompanyController(...)
+new JobController(...)
+
+or:
+registerController(...)
+registerService(...)
+
+Spring does that.

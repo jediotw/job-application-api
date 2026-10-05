@@ -4,17 +4,15 @@ import jakarta.validation.constraints.NotBlank;
 
 public class UpdateApplicationRequest {
 
-    @NotBlank
-    private String status;
+  @NotBlank private String status;
 
-    public UpdateApplicationRequest() {
-    }
+  public UpdateApplicationRequest() {}
 
-    public String getStatus() {
-        return status;
-    }
+  public String getStatus() {
+    return status;
+  }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
+  public void setStatus(String status) {
+    this.status = status;
+  }
 }

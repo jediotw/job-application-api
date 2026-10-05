@@ -1,5 +1,12 @@
 package com.example.jobapplicationapi.candidate;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.example.jobapplicationapi.application.repository.ApplicationRepository;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.repository.CandidateRepository;
@@ -11,180 +18,110 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-
 @SpringBootTest
 @AutoConfigureMockMvc
 public class CandidateIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private CandidateRepository candidateRepository;
+  @Autowired private CandidateRepository candidateRepository;
 
-    @Autowired
-    private ApplicationRepository applicationRepository;
+  @Autowired private ApplicationRepository applicationRepository;
 
-    // ---------------------------------------------------------
-    // Clean database before every test
-    // ---------------------------------------------------------
+  // ---------------------------------------------------------
+  // Clean database before every test
+  // ---------------------------------------------------------
 
-    @BeforeEach
-    void cleanDatabase() {
-        applicationRepository.deleteAll();
-        candidateRepository.deleteAll();
-    }
+  @BeforeEach
+  void cleanDatabase() {
+    applicationRepository.deleteAll();
+    candidateRepository.deleteAll();
+  }
 
+  // ---------------------------------------------------------
+  // GET /candidates
+  // ---------------------------------------------------------
 
-    // ---------------------------------------------------------
-    // GET /candidates
-    // ---------------------------------------------------------
+  @Test
+  void shouldGetAllCandidates() throws Exception {
 
-    @Test
-    void shouldGetAllCandidates() throws Exception {
+    Candidate candidate1 = new Candidate();
 
-        Candidate candidate1 = new Candidate();
+    candidate1.setName("Rahul Sharma");
+    candidate1.setEmail("rahul@example.com");
+    candidate1.setPhone("9876543210");
+    candidate1.setResumeUrl("https://example.com/rahul.pdf");
 
-        candidate1.setName("Rahul Sharma");
-        candidate1.setEmail("rahul@example.com");
-        candidate1.setPhone("9876543210");
-        candidate1.setResumeUrl(
-                "https://example.com/rahul.pdf"
-        );
+    candidateRepository.save(candidate1);
 
-        candidateRepository.save(candidate1);
+    Candidate candidate2 = new Candidate();
 
+    candidate2.setName("Amit Kumar");
+    candidate2.setEmail("amit@example.com");
+    candidate2.setPhone("9999999999");
+    candidate2.setResumeUrl("https://example.com/amit.pdf");
 
-        Candidate candidate2 = new Candidate();
+    candidateRepository.save(candidate2);
 
-        candidate2.setName("Amit Kumar");
-        candidate2.setEmail("amit@example.com");
-        candidate2.setPhone("9999999999");
-        candidate2.setResumeUrl(
-                "https://example.com/amit.pdf"
-        );
+    mockMvc
+        .perform(get("/candidates"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0].name").value("Rahul Sharma"))
+        .andExpect(jsonPath("$[0].email").value("rahul@example.com"))
+        .andExpect(jsonPath("$[1].name").value("Amit Kumar"))
+        .andExpect(jsonPath("$[1].email").value("amit@example.com"));
+  }
 
-        candidateRepository.save(candidate2);
+  // ---------------------------------------------------------
+  // GET /candidates/{id} - success
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldGetCandidateById() throws Exception {
 
-        mockMvc.perform(
-                        get("/candidates")
-                )
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(
-                        jsonPath("$[0].name")
-                                .value("Rahul Sharma")
-                )
-                .andExpect(
-                        jsonPath("$[0].email")
-                                .value("rahul@example.com")
-                )
-                .andExpect(
-                        jsonPath("$[1].name")
-                                .value("Amit Kumar")
-                )
-                .andExpect(
-                        jsonPath("$[1].email")
-                                .value("amit@example.com")
-                );
-    }
+    Candidate candidate = new Candidate();
 
+    candidate.setName("Rahul Sharma");
+    candidate.setEmail("rahul@example.com");
+    candidate.setPhone("9876543210");
+    candidate.setResumeUrl("https://example.com/rahul.pdf");
 
-    // ---------------------------------------------------------
-    // GET /candidates/{id} - success
-    // ---------------------------------------------------------
+    Candidate savedCandidate = candidateRepository.save(candidate);
 
-    @Test
-    void shouldGetCandidateById() throws Exception {
+    mockMvc
+        .perform(get("/candidates/" + savedCandidate.getId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(savedCandidate.getId()))
+        .andExpect(jsonPath("$.name").value("Rahul Sharma"))
+        .andExpect(jsonPath("$.email").value("rahul@example.com"))
+        .andExpect(jsonPath("$.phone").value("9876543210"))
+        .andExpect(jsonPath("$.resumeUrl").value("https://example.com/rahul.pdf"));
+  }
 
-        Candidate candidate = new Candidate();
+  // ---------------------------------------------------------
+  // GET /candidates/{id} - not found
+  // ---------------------------------------------------------
 
-        candidate.setName("Rahul Sharma");
-        candidate.setEmail("rahul@example.com");
-        candidate.setPhone("9876543210");
-        candidate.setResumeUrl(
-                "https://example.com/rahul.pdf"
-        );
+  @Test
+  void shouldReturn404WhenCandidateDoesNotExist() throws Exception {
 
+    mockMvc
+        .perform(get("/candidates/999999"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.message").value("Candidate not found"));
+  }
 
-        Candidate savedCandidate =
-                candidateRepository.save(candidate);
+  // ---------------------------------------------------------
+  // POST /candidates - success
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldCreateCandidate() throws Exception {
 
-        mockMvc.perform(
-                        get(
-                                "/candidates/"
-                                        + savedCandidate.getId()
-                        )
-                )
-                .andExpect(status().isOk())
-                .andExpect(
-                        jsonPath("$.id")
-                                .value(
-                                        savedCandidate.getId()
-                                )
-                )
-                .andExpect(
-                        jsonPath("$.name")
-                                .value("Rahul Sharma")
-                )
-                .andExpect(
-                        jsonPath("$.email")
-                                .value("rahul@example.com")
-                )
-                .andExpect(
-                        jsonPath("$.phone")
-                                .value("9876543210")
-                )
-                .andExpect(
-                        jsonPath("$.resumeUrl")
-                                .value(
-                                        "https://example.com/rahul.pdf"
-                                )
-                );
-    }
-
-
-    // ---------------------------------------------------------
-    // GET /candidates/{id} - not found
-    // ---------------------------------------------------------
-
-    @Test
-    void shouldReturn404WhenCandidateDoesNotExist()
-            throws Exception {
-
-        mockMvc.perform(
-                        get("/candidates/999999")
-                )
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(404)
-                )
-                .andExpect(
-                        jsonPath("$.message")
-                                .value("Candidate not found")
-                );
-    }
-
-
-    // ---------------------------------------------------------
-    // POST /candidates - success
-    // ---------------------------------------------------------
-
-    @Test
-    void shouldCreateCandidate() throws Exception {
-
-        String requestJson = """
+    String requestJson =
+        """
                 {
                     "name": "Rahul Sharma",
                     "email": "rahul@example.com",
@@ -193,55 +130,27 @@ public class CandidateIntegrationTest {
                 }
                 """;
 
+    mockMvc
+        .perform(post("/candidates").contentType(MediaType.APPLICATION_JSON).content(requestJson))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").exists())
+        .andExpect(jsonPath("$.name").value("Rahul Sharma"))
+        .andExpect(jsonPath("$.email").value("rahul@example.com"))
+        .andExpect(jsonPath("$.phone").value("9876543210"))
+        .andExpect(jsonPath("$.resumeUrl").value("https://example.com/rahul.pdf"))
+        .andExpect(jsonPath("$.createdAt").exists())
+        .andExpect(jsonPath("$.updatedAt").exists());
+  }
 
-        mockMvc.perform(
-                        post("/candidates")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestJson)
-                )
-                .andExpect(status().isOk())
-                .andExpect(
-                        jsonPath("$.id")
-                                .exists()
-                )
-                .andExpect(
-                        jsonPath("$.name")
-                                .value("Rahul Sharma")
-                )
-                .andExpect(
-                        jsonPath("$.email")
-                                .value("rahul@example.com")
-                )
-                .andExpect(
-                        jsonPath("$.phone")
-                                .value("9876543210")
-                )
-                .andExpect(
-                        jsonPath("$.resumeUrl")
-                                .value(
-                                        "https://example.com/rahul.pdf"
-                                )
-                )
-                .andExpect(
-                        jsonPath("$.createdAt")
-                                .exists()
-                )
-                .andExpect(
-                        jsonPath("$.updatedAt")
-                                .exists()
-                );
-    }
+  // ---------------------------------------------------------
+  // POST /candidates - validation failure
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldReturn400WhenCreatingInvalidCandidate() throws Exception {
 
-    // ---------------------------------------------------------
-    // POST /candidates - validation failure
-    // ---------------------------------------------------------
-
-    @Test
-    void shouldReturn400WhenCreatingInvalidCandidate()
-            throws Exception {
-
-        String requestJson = """
+    String requestJson =
+        """
                 {
                     "name": "",
                     "email": "invalid-email",
@@ -249,50 +158,32 @@ public class CandidateIntegrationTest {
                 }
                 """;
 
+    mockMvc
+        .perform(post("/candidates").contentType(MediaType.APPLICATION_JSON).content(requestJson))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.message").value("Validation failed"))
+        .andExpect(jsonPath("$.errors.name").exists())
+        .andExpect(jsonPath("$.errors.email").exists());
+  }
 
-        mockMvc.perform(
-                        post("/candidates")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestJson)
-                )
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(400)
-                )
-                .andExpect(
-                        jsonPath("$.message")
-                                .value("Validation failed")
-                )
-                .andExpect(
-                        jsonPath("$.errors.name")
-                                .exists()
-                )
-                .andExpect(
-                        jsonPath("$.errors.email")
-                                .exists()
-                );
-    }
+  // ---------------------------------------------------------
+  // POST /candidates - duplicate email
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldReturn409WhenEmailAlreadyExists() throws Exception {
 
-    // ---------------------------------------------------------
-    // POST /candidates - duplicate email
-    // ---------------------------------------------------------
+    Candidate candidate = new Candidate();
 
-    @Test
-    void shouldReturn409WhenEmailAlreadyExists()
-            throws Exception {
+    candidate.setName("Existing Candidate");
+    candidate.setEmail("duplicate@example.com");
+    candidate.setPhone("1111111111");
 
-        Candidate candidate = new Candidate();
+    candidateRepository.save(candidate);
 
-        candidate.setName("Existing Candidate");
-        candidate.setEmail("duplicate@example.com");
-        candidate.setPhone("1111111111");
-
-        candidateRepository.save(candidate);
-
-
-        String requestJson = """
+    String requestJson =
+        """
                 {
                     "name": "Another Candidate",
                     "email": "duplicate@example.com",
@@ -300,46 +191,31 @@ public class CandidateIntegrationTest {
                 }
                 """;
 
+    mockMvc
+        .perform(post("/candidates").contentType(MediaType.APPLICATION_JSON).content(requestJson))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.message").value("Data conflict"));
+  }
 
-        mockMvc.perform(
-                        post("/candidates")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestJson)
-                )
-                .andExpect(status().isConflict())
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(409)
-                )
-                .andExpect(
-                        jsonPath("$.message")
-                                .value("Data conflict")
-                );
-    }
+  // ---------------------------------------------------------
+  // PUT /candidates/{id} - success
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldUpdateCandidate() throws Exception {
 
-    // ---------------------------------------------------------
-    // PUT /candidates/{id} - success
-    // ---------------------------------------------------------
+    Candidate candidate = new Candidate();
 
-    @Test
-    void shouldUpdateCandidate() throws Exception {
+    candidate.setName("Rahul Sharma");
+    candidate.setEmail("rahul@example.com");
+    candidate.setPhone("9876543210");
+    candidate.setResumeUrl("https://example.com/rahul.pdf");
 
-        Candidate candidate = new Candidate();
+    Candidate savedCandidate = candidateRepository.save(candidate);
 
-        candidate.setName("Rahul Sharma");
-        candidate.setEmail("rahul@example.com");
-        candidate.setPhone("9876543210");
-        candidate.setResumeUrl(
-                "https://example.com/rahul.pdf"
-        );
-
-
-        Candidate savedCandidate =
-                candidateRepository.save(candidate);
-
-
-        String requestJson = """
+    String requestJson =
+        """
                 {
                     "name": "Rahul Updated",
                     "email": "rahul.updated@example.com",
@@ -348,54 +224,28 @@ public class CandidateIntegrationTest {
                 }
                 """;
 
+    mockMvc
+        .perform(
+            put("/candidates/" + savedCandidate.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(savedCandidate.getId()))
+        .andExpect(jsonPath("$.name").value("Rahul Updated"))
+        .andExpect(jsonPath("$.email").value("rahul.updated@example.com"))
+        .andExpect(jsonPath("$.phone").value("9999999999"))
+        .andExpect(jsonPath("$.resumeUrl").value("https://example.com/updated.pdf"));
+  }
 
-        mockMvc.perform(
-                        put(
-                                "/candidates/"
-                                        + savedCandidate.getId()
-                        )
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestJson)
-                )
-                .andExpect(status().isOk())
-                .andExpect(
-                        jsonPath("$.id")
-                                .value(
-                                        savedCandidate.getId()
-                                )
-                )
-                .andExpect(
-                        jsonPath("$.name")
-                                .value("Rahul Updated")
-                )
-                .andExpect(
-                        jsonPath("$.email")
-                                .value(
-                                        "rahul.updated@example.com"
-                                )
-                )
-                .andExpect(
-                        jsonPath("$.phone")
-                                .value("9999999999")
-                )
-                .andExpect(
-                        jsonPath("$.resumeUrl")
-                                .value(
-                                        "https://example.com/updated.pdf"
-                                )
-                );
-    }
+  // ---------------------------------------------------------
+  // PUT /candidates/{id} - not found
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldReturn404WhenUpdatingNonExistingCandidate() throws Exception {
 
-    // ---------------------------------------------------------
-    // PUT /candidates/{id} - not found
-    // ---------------------------------------------------------
-
-    @Test
-    void shouldReturn404WhenUpdatingNonExistingCandidate()
-            throws Exception {
-
-        String requestJson = """
+    String requestJson =
+        """
                 {
                     "name": "Rahul Updated",
                     "email": "rahul.updated@example.com",
@@ -403,33 +253,23 @@ public class CandidateIntegrationTest {
                 }
                 """;
 
+    mockMvc
+        .perform(
+            put("/candidates/999999").contentType(MediaType.APPLICATION_JSON).content(requestJson))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.message").value("Candidate not found"));
+  }
 
-        mockMvc.perform(
-                        put("/candidates/999999")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestJson)
-                )
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(404)
-                )
-                .andExpect(
-                        jsonPath("$.message")
-                                .value("Candidate not found")
-                );
-    }
+  // ---------------------------------------------------------
+  // PUT /candidates/{id} - validation failure
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldReturn400WhenUpdatingInvalidCandidate() throws Exception {
 
-    // ---------------------------------------------------------
-    // PUT /candidates/{id} - validation failure
-    // ---------------------------------------------------------
-
-    @Test
-    void shouldReturn400WhenUpdatingInvalidCandidate()
-            throws Exception {
-
-        String requestJson = """
+    String requestJson =
+        """
                 {
                     "name": "",
                     "email": "invalid-email",
@@ -437,60 +277,40 @@ public class CandidateIntegrationTest {
                 }
                 """;
 
+    mockMvc
+        .perform(put("/candidates/1").contentType(MediaType.APPLICATION_JSON).content(requestJson))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.message").value("Validation failed"))
+        .andExpect(jsonPath("$.errors.name").exists())
+        .andExpect(jsonPath("$.errors.email").exists());
+  }
 
-        mockMvc.perform(
-                        put("/candidates/1")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestJson)
-                )
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(400)
-                )
-                .andExpect(
-                        jsonPath("$.message")
-                                .value("Validation failed")
-                )
-                .andExpect(
-                        jsonPath("$.errors.name")
-                                .exists()
-                )
-                .andExpect(
-                        jsonPath("$.errors.email")
-                                .exists()
-                );
-    }
+  // ---------------------------------------------------------
+  // PUT /candidates/{id} - duplicate email
+  // ---------------------------------------------------------
 
+  @Test
+  void shouldReturn409WhenUpdatingWithExistingEmail() throws Exception {
 
-    // ---------------------------------------------------------
-    // PUT /candidates/{id} - duplicate email
-    // ---------------------------------------------------------
+    Candidate candidate1 = new Candidate();
 
-    @Test
-    void shouldReturn409WhenUpdatingWithExistingEmail()
-            throws Exception {
+    candidate1.setName("Rahul Sharma");
+    candidate1.setEmail("rahul@example.com");
+    candidate1.setPhone("9876543210");
 
-        Candidate candidate1 = new Candidate();
+    candidateRepository.save(candidate1);
 
-        candidate1.setName("Rahul Sharma");
-        candidate1.setEmail("rahul@example.com");
-        candidate1.setPhone("9876543210");
+    Candidate candidate2 = new Candidate();
 
-        candidateRepository.save(candidate1);
+    candidate2.setName("Amit Kumar");
+    candidate2.setEmail("amit@example.com");
+    candidate2.setPhone("9999999999");
 
+    Candidate savedCandidate = candidateRepository.save(candidate2);
 
-        Candidate candidate2 = new Candidate();
-
-        candidate2.setName("Amit Kumar");
-        candidate2.setEmail("amit@example.com");
-        candidate2.setPhone("9999999999");
-
-        Candidate savedCandidate =
-                candidateRepository.save(candidate2);
-
-
-        String requestJson = """
+    String requestJson =
+        """
                 {
                     "name": "Amit Updated",
                     "email": "rahul@example.com",
@@ -498,87 +318,51 @@ public class CandidateIntegrationTest {
                 }
                 """;
 
+    mockMvc
+        .perform(
+            put("/candidates/" + savedCandidate.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.message").value("Data conflict"));
+  }
 
-        mockMvc.perform(
-                        put(
-                                "/candidates/"
-                                        + savedCandidate.getId()
-                        )
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestJson)
-                )
-                .andExpect(status().isConflict())
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(409)
-                )
-                .andExpect(
-                        jsonPath("$.message")
-                                .value("Data conflict")
-                );
+  // ---------------------------------------------------------
+  // DELETE /candidates/{id} - success
+  // ---------------------------------------------------------
+
+  @Test
+  void shouldDeleteCandidate() throws Exception {
+
+    Candidate candidate = new Candidate();
+
+    candidate.setName("Rahul Sharma");
+    candidate.setEmail("rahul@example.com");
+    candidate.setPhone("9876543210");
+
+    Candidate savedCandidate = candidateRepository.save(candidate);
+
+    mockMvc.perform(delete("/candidates/" + savedCandidate.getId())).andExpect(status().isOk());
+
+    boolean exists = candidateRepository.existsById(savedCandidate.getId());
+
+    if (exists) {
+      throw new AssertionError("Candidate was not deleted");
     }
+  }
 
+  // ---------------------------------------------------------
+  // DELETE /candidates/{id} - not found
+  // ---------------------------------------------------------
 
-    // ---------------------------------------------------------
-    // DELETE /candidates/{id} - success
-    // ---------------------------------------------------------
+  @Test
+  void shouldReturn404WhenDeletingNonExistingCandidate() throws Exception {
 
-    @Test
-    void shouldDeleteCandidate() throws Exception {
-
-        Candidate candidate = new Candidate();
-
-        candidate.setName("Rahul Sharma");
-        candidate.setEmail("rahul@example.com");
-        candidate.setPhone("9876543210");
-
-
-        Candidate savedCandidate =
-                candidateRepository.save(candidate);
-
-
-        mockMvc.perform(
-                        delete(
-                                "/candidates/"
-                                        + savedCandidate.getId()
-                        )
-                )
-                .andExpect(status().isOk());
-
-
-        boolean exists =
-                candidateRepository.existsById(
-                        savedCandidate.getId()
-                );
-
-
-        if (exists) {
-            throw new AssertionError(
-                    "Candidate was not deleted"
-            );
-        }
-    }
-
-
-    // ---------------------------------------------------------
-    // DELETE /candidates/{id} - not found
-    // ---------------------------------------------------------
-
-    @Test
-    void shouldReturn404WhenDeletingNonExistingCandidate()
-            throws Exception {
-
-        mockMvc.perform(
-                        delete("/candidates/999999")
-                )
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(404)
-                )
-                .andExpect(
-                        jsonPath("$.message")
-                                .value("Candidate not found")
-                );
-    }
+    mockMvc
+        .perform(delete("/candidates/999999"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.message").value("Candidate not found"));
+  }
 }

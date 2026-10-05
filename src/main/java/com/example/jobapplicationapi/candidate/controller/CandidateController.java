@@ -5,53 +5,48 @@ import com.example.jobapplicationapi.candidate.dto.UpdateCandidateRequest;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.service.CandidateService;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/candidates")
 public class CandidateController {
-    private final CandidateService candidateService;
+  private final CandidateService candidateService;
 
-    public CandidateController(CandidateService candidateService){
-        this.candidateService=candidateService;
-    }
+  public CandidateController(CandidateService candidateService) {
+    this.candidateService = candidateService;
+  }
 
-    @GetMapping
-    public List<Candidate> getAllCandidates(){
+  @GetMapping
+  public List<Candidate> getAllCandidates() {
     return candidateService.getAllCandidates();
-    }
-    @GetMapping("/{id}")
-    public Candidate getCandidateById(@PathVariable Long id) {
-        return candidateService.getCandidateById(id);
-    }
+  }
 
-    @PostMapping
-    public Candidate createCandidate(
-             @Valid  @RequestBody CreateCandidateRequest request) {
+  @GetMapping("/{id}")
+  public Candidate getCandidateById(@PathVariable Long id) {
+    return candidateService.getCandidateById(id);
+  }
 
-        Candidate savedCandidate = candidateService.createCandidate(request);
+  @PostMapping
+  public Candidate createCandidate(@Valid @RequestBody CreateCandidateRequest request) {
 
-        return savedCandidate;
-    }
+    Candidate savedCandidate = candidateService.createCandidate(request);
 
-    @DeleteMapping("/{id}")
-    public void deleteCandidate(@PathVariable Long id) {
+    return savedCandidate;
+  }
 
-        candidateService.deleteCandidate(id);
-    }
+  @DeleteMapping("/{id}")
+  public void deleteCandidate(@PathVariable Long id) {
 
-    @PutMapping("/{id}")
-    public Candidate updateCandidate( @PathVariable Long id, @Valid @RequestBody UpdateCandidateRequest request) {
+    candidateService.deleteCandidate(id);
+  }
 
-        Candidate updatedCandidate =
-                candidateService.updateCandidate(id, request);
+  @PutMapping("/{id}")
+  public Candidate updateCandidate(
+      @PathVariable Long id, @Valid @RequestBody UpdateCandidateRequest request) {
 
-        return updatedCandidate;
-    }
+    Candidate updatedCandidate = candidateService.updateCandidate(id, request);
 
-
-
-
+    return updatedCandidate;
+  }
 }

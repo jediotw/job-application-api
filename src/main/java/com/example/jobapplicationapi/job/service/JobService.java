@@ -6,119 +6,107 @@ import com.example.jobapplicationapi.job.dto.CreateJobRequest;
 import com.example.jobapplicationapi.job.dto.UpdateJobRequest;
 import com.example.jobapplicationapi.job.model.Job;
 import com.example.jobapplicationapi.job.repository.JobRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 @Service
 public class JobService {
 
-    private final JobRepository jobRepository;
-    private final CompanyRepository companyRepository;
+  private final JobRepository jobRepository;
+  private final CompanyRepository companyRepository;
 
-    public JobService(
-            JobRepository jobRepository,
-            CompanyRepository companyRepository) {
+  public JobService(JobRepository jobRepository, CompanyRepository companyRepository) {
 
-        this.jobRepository = jobRepository;
-        this.companyRepository = companyRepository;
+    this.jobRepository = jobRepository;
+    this.companyRepository = companyRepository;
+  }
+
+  public List<Job> getAllJobs() {
+
+    List<Job> jobs = new ArrayList<>();
+
+    Iterable<Job> result = jobRepository.findAll();
+
+    for (Job job : result) {
+      jobs.add(job);
     }
 
-    public List<Job> getAllJobs() {
+    return jobs;
+  }
 
-        List<Job> jobs = new ArrayList<>();
+  public Job getJobById(Long id) {
 
-        Iterable<Job> result = jobRepository.findAll();
+    Optional<Job> result = jobRepository.findById(id);
 
-        for (Job job : result) {
-            jobs.add(job);
-        }
-
-        return jobs;
+    if (!result.isPresent()) {
+      throw new ResourceNotFoundException("Job not found");
     }
 
-    public Job getJobById(Long id) {
+    return result.get();
+  }
 
-        Optional<Job> result =
-                jobRepository.findById(id);
+  public Job createJob(CreateJobRequest request) {
 
-        if (!result.isPresent()) {
-            throw new ResourceNotFoundException("Job not found");
-        }
+    boolean companyExists = companyRepository.existsById(request.getCompanyId());
 
-        return result.get();
+    if (!companyExists) {
+      throw new ResourceNotFoundException("Company not found");
     }
 
-    public Job createJob(CreateJobRequest request) {
+    Job job = new Job();
 
-        boolean companyExists =
-                companyRepository.existsById(request.getCompanyId());
+    job.setCompanyId(request.getCompanyId());
+    job.setTitle(request.getTitle());
+    job.setDescription(request.getDescription());
+    job.setLocation(request.getLocation());
+    job.setEmploymentType(request.getEmploymentType());
+    job.setSalaryMin(request.getSalaryMin());
+    job.setSalaryMax(request.getSalaryMax());
 
-        if (!companyExists) {
-            throw new ResourceNotFoundException("Company not found");
-        }
+    Job savedJob = jobRepository.save(job);
 
-        Job job = new Job();
+    return savedJob;
+  }
 
-        job.setCompanyId(request.getCompanyId());
-        job.setTitle(request.getTitle());
-        job.setDescription(request.getDescription());
-        job.setLocation(request.getLocation());
-        job.setEmploymentType(request.getEmploymentType());
-        job.setSalaryMin(request.getSalaryMin());
-        job.setSalaryMax(request.getSalaryMax());
+  public Job updateJob(Long id, UpdateJobRequest request) {
 
-        Job savedJob =
-                jobRepository.save(job);
+    Optional<Job> result = jobRepository.findById(id);
 
-        return savedJob;
+    if (!result.isPresent()) {
+      throw new ResourceNotFoundException("Job not found");
     }
 
-    public Job updateJob(
-            Long id,
-            UpdateJobRequest request) {
+    boolean companyExists = companyRepository.existsById(request.getCompanyId());
 
-        Optional<Job> result =
-                jobRepository.findById(id);
-
-        if (!result.isPresent()) {
-            throw new ResourceNotFoundException("Job not found");
-        }
-
-        boolean companyExists =
-                companyRepository.existsById(request.getCompanyId());
-
-        if (!companyExists) {
-            throw new ResourceNotFoundException("Company not found");
-        }
-
-        Job existingJob = result.get();
-
-        existingJob.setCompanyId(request.getCompanyId());
-        existingJob.setTitle(request.getTitle());
-        existingJob.setDescription(request.getDescription());
-        existingJob.setLocation(request.getLocation());
-        existingJob.setEmploymentType(request.getEmploymentType());
-        existingJob.setSalaryMin(request.getSalaryMin());
-        existingJob.setSalaryMax(request.getSalaryMax());
-
-        Job savedJob =
-                jobRepository.save(existingJob);
-
-        return savedJob;
+    if (!companyExists) {
+      throw new ResourceNotFoundException("Company not found");
     }
 
-    public void deleteJob(Long id) {
+    Job existingJob = result.get();
 
-        boolean exists =
-                jobRepository.existsById(id);
+    existingJob.setCompanyId(request.getCompanyId());
+    existingJob.setTitle(request.getTitle());
+    existingJob.setDescription(request.getDescription());
+    existingJob.setLocation(request.getLocation());
+    existingJob.setEmploymentType(request.getEmploymentType());
+    existingJob.setSalaryMin(request.getSalaryMin());
+    existingJob.setSalaryMax(request.getSalaryMax());
 
-        if (!exists) {
-            throw new ResourceNotFoundException("Job not found");
-        }
+    Job savedJob = jobRepository.save(existingJob);
 
-        jobRepository.deleteById(id);
+    return savedJob;
+  }
+
+  public void deleteJob(Long id) {
+
+    boolean exists = jobRepository.existsById(id);
+
+    if (!exists) {
+      throw new ResourceNotFoundException("Job not found");
     }
+
+    jobRepository.deleteById(id);
+  }
 }

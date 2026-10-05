@@ -5,94 +5,86 @@ import com.example.jobapplicationapi.company.dto.UpdateCompanyRequest;
 import com.example.jobapplicationapi.company.model.Company;
 import com.example.jobapplicationapi.company.repository.CompanyRepository;
 import com.example.jobapplicationapi.exception.ResourceNotFoundException;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 @Service
 public class CompanyService {
 
-    private final CompanyRepository companyRepository;
+  private final CompanyRepository companyRepository;
 
-    public CompanyService(CompanyRepository companyRepository) {
-        this.companyRepository = companyRepository;
+  public CompanyService(CompanyRepository companyRepository) {
+    this.companyRepository = companyRepository;
+  }
+
+  public List<Company> getAllCompanies() {
+
+    List<Company> companies = new ArrayList<>();
+
+    Iterable<Company> result = companyRepository.findAll();
+
+    for (Company company : result) {
+      companies.add(company);
     }
 
-    public List<Company> getAllCompanies() {
+    return companies;
+  }
 
-        List<Company> companies = new ArrayList<>();
+  public Company getCompanyById(Long id) {
 
-        Iterable<Company> result = companyRepository.findAll();
+    Optional<Company> result = companyRepository.findById(id);
 
-        for (Company company : result) {
-            companies.add(company);
-        }
-
-        return companies;
+    if (!result.isPresent()) {
+      throw new ResourceNotFoundException("Company not found");
     }
 
-    public Company getCompanyById(Long id) {
+    return result.get();
+  }
 
-        Optional<Company> result =
-                companyRepository.findById(id);
+  public Company createCompany(CreateCompanyRequest request) {
 
-        if (!result.isPresent()) {
-            throw new ResourceNotFoundException("Company not found");
-        }
+    Company company = new Company();
 
-        return result.get();
+    company.setName(request.getName());
+    company.setCin(request.getCin());
+    company.setWebsite(request.getWebsite());
+    company.setDescription(request.getDescription());
+
+    Company savedCompany = companyRepository.save(company);
+
+    return savedCompany;
+  }
+
+  public Company updateCompany(Long id, UpdateCompanyRequest request) {
+
+    Optional<Company> result = companyRepository.findById(id);
+
+    if (!result.isPresent()) {
+      throw new ResourceNotFoundException("Company not found");
     }
 
-    public Company createCompany(CreateCompanyRequest request) {
+    Company existingCompany = result.get();
 
-        Company company = new Company();
+    existingCompany.setName(request.getName());
+    existingCompany.setCin(request.getCin());
+    existingCompany.setWebsite(request.getWebsite());
+    existingCompany.setDescription(request.getDescription());
 
-        company.setName(request.getName());
-        company.setCin(request.getCin());
-        company.setWebsite(request.getWebsite());
-        company.setDescription(request.getDescription());
+    Company savedCompany = companyRepository.save(existingCompany);
 
-        Company savedCompany =
-                companyRepository.save(company);
+    return savedCompany;
+  }
 
-        return savedCompany;
+  public void deleteCompany(Long id) {
+
+    boolean exists = companyRepository.existsById(id);
+
+    if (!exists) {
+      throw new ResourceNotFoundException("Company not found");
     }
 
-    public Company updateCompany(
-            Long id,
-            UpdateCompanyRequest request) {
-
-        Optional<Company> result =
-                companyRepository.findById(id);
-
-        if (!result.isPresent()) {
-            throw new ResourceNotFoundException("Company not found");
-        }
-
-        Company existingCompany = result.get();
-
-        existingCompany.setName(request.getName());
-        existingCompany.setCin(request.getCin());
-        existingCompany.setWebsite(request.getWebsite());
-        existingCompany.setDescription(request.getDescription());
-
-        Company savedCompany =
-                companyRepository.save(existingCompany);
-
-        return savedCompany;
-    }
-
-    public void deleteCompany(Long id) {
-
-        boolean exists =
-                companyRepository.existsById(id);
-
-        if (!exists) {
-            throw new ResourceNotFoundException("Company not found");
-        }
-
-        companyRepository.deleteById(id);
-    }
+    companyRepository.deleteById(id);
+  }
 }

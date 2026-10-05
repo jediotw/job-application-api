@@ -5,47 +5,44 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public class UpdateCandidateRequest {
-    @NotBlank
-    private String name;
-    @NotBlank
-    @Email
-    private String email;
-    private String phone;
-    @JsonProperty("resume_url")
-    private String resumeUrl;
+  @NotBlank private String name;
+  @NotBlank @Email private String email;
+  private String phone;
 
-    public UpdateCandidateRequest() {
-    }
+  @JsonProperty("resume_url")
+  private String resumeUrl;
 
-    public String getName() {
-        return name;
-    }
+  public UpdateCandidateRequest() {}
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public String getEmail() {
-        return email;
-    }
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+  public String getEmail() {
+    return email;
+  }
 
-    public String getPhone() {
-        return phone;
-    }
+  public void setEmail(String email) {
+    this.email = email;
+  }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
+  public String getPhone() {
+    return phone;
+  }
 
-    public String getResumeUrl() {
-        return resumeUrl;
-    }
+  public void setPhone(String phone) {
+    this.phone = phone;
+  }
 
-    public void setResumeUrl(String resumeUrl) {
-        this.resumeUrl = resumeUrl;
-    }
+  public String getResumeUrl() {
+    return resumeUrl;
+  }
+
+  public void setResumeUrl(String resumeUrl) {
+    this.resumeUrl = resumeUrl;
+  }
 }

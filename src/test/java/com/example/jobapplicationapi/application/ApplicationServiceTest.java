@@ -1,5 +1,8 @@
 package com.example.jobapplicationapi.application;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.example.jobapplicationapi.application.dto.CreateApplicationRequest;
 import com.example.jobapplicationapi.application.model.Application;
 import com.example.jobapplicationapi.application.repository.ApplicationRepository;
@@ -7,256 +10,183 @@ import com.example.jobapplicationapi.application.service.ApplicationService;
 import com.example.jobapplicationapi.candidate.repository.CandidateRepository;
 import com.example.jobapplicationapi.exception.ResourceNotFoundException;
 import com.example.jobapplicationapi.job.repository.JobRepository;
-import org.junit.jupiter.api.Test;
-
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
 
 public class ApplicationServiceTest {
 
-    @Test
-    void shouldCreateApplication() {
+  @Test
+  void shouldCreateApplication() {
 
-        ApplicationRepository applicationRepository =
-                mock(ApplicationRepository.class);
+    ApplicationRepository applicationRepository = mock(ApplicationRepository.class);
 
-        CandidateRepository candidateRepository =
-                mock(CandidateRepository.class);
+    CandidateRepository candidateRepository = mock(CandidateRepository.class);
 
-        JobRepository jobRepository =
-                mock(JobRepository.class);
+    JobRepository jobRepository = mock(JobRepository.class);
 
-        ApplicationService applicationService =
-                new ApplicationService(
-                        applicationRepository,
-                        candidateRepository,
-                        jobRepository
-                );
+    ApplicationService applicationService =
+        new ApplicationService(applicationRepository, candidateRepository, jobRepository);
 
-        CreateApplicationRequest request =
-                new CreateApplicationRequest();
+    CreateApplicationRequest request = new CreateApplicationRequest();
 
-        request.setCandidateId(1L);
-        request.setJobId(1L);
-        request.setStatus("APPLIED");
+    request.setCandidateId(1L);
+    request.setJobId(1L);
+    request.setStatus("APPLIED");
 
-        when(candidateRepository.existsById(1L))
-                .thenReturn(true);
+    when(candidateRepository.existsById(1L)).thenReturn(true);
 
-        when(jobRepository.existsById(1L))
-                .thenReturn(true);
+    when(jobRepository.existsById(1L)).thenReturn(true);
 
-        Application savedApplication =
-                new Application();
+    Application savedApplication = new Application();
 
-        savedApplication.setId(1L);
-        savedApplication.setCandidateId(1L);
-        savedApplication.setJobId(1L);
-        savedApplication.setStatus("APPLIED");
+    savedApplication.setId(1L);
+    savedApplication.setCandidateId(1L);
+    savedApplication.setJobId(1L);
+    savedApplication.setStatus("APPLIED");
 
-        when(applicationRepository.save(any(Application.class)))
-                .thenReturn(savedApplication);
+    when(applicationRepository.save(any(Application.class))).thenReturn(savedApplication);
 
-        Application result =
-                applicationService.createApplication(request);
+    Application result = applicationService.createApplication(request);
 
-        assertEquals(1L, result.getId());
-        assertEquals(1L, result.getCandidateId());
-        assertEquals(1L, result.getJobId());
-        assertEquals("APPLIED", result.getStatus());
+    assertEquals(1L, result.getId());
+    assertEquals(1L, result.getCandidateId());
+    assertEquals(1L, result.getJobId());
+    assertEquals("APPLIED", result.getStatus());
 
-        verify(applicationRepository)
-                .save(any(Application.class));
-    }
-    @Test
-    void shouldThrowExceptionWhenCandidateDoesNotExist() {
+    verify(applicationRepository).save(any(Application.class));
+  }
 
-        ApplicationRepository applicationRepository =
-                mock(ApplicationRepository.class);
+  @Test
+  void shouldThrowExceptionWhenCandidateDoesNotExist() {
 
-        CandidateRepository candidateRepository =
-                mock(CandidateRepository.class);
+    ApplicationRepository applicationRepository = mock(ApplicationRepository.class);
 
-        JobRepository jobRepository =
-                mock(JobRepository.class);
+    CandidateRepository candidateRepository = mock(CandidateRepository.class);
 
-        ApplicationService applicationService =
-                new ApplicationService(
-                        applicationRepository,
-                        candidateRepository,
-                        jobRepository
-                );
+    JobRepository jobRepository = mock(JobRepository.class);
 
-        CreateApplicationRequest request =
-                new CreateApplicationRequest();
+    ApplicationService applicationService =
+        new ApplicationService(applicationRepository, candidateRepository, jobRepository);
 
-        request.setCandidateId(999L);
-        request.setJobId(1L);
-        request.setStatus("APPLIED");
+    CreateApplicationRequest request = new CreateApplicationRequest();
 
-        when(candidateRepository.existsById(999L))
-                .thenReturn(false);
+    request.setCandidateId(999L);
+    request.setJobId(1L);
+    request.setStatus("APPLIED");
 
-        assertThrows(
-                ResourceNotFoundException.class,
-                () -> applicationService.createApplication(request)
-        );
+    when(candidateRepository.existsById(999L)).thenReturn(false);
 
-        verify(applicationRepository, never())
-                .save(any(Application.class));
-    }
-    @Test
-    void shouldThrowExceptionWhenJobDoesNotExist() {
+    assertThrows(
+        ResourceNotFoundException.class, () -> applicationService.createApplication(request));
 
-        ApplicationRepository applicationRepository =
-                mock(ApplicationRepository.class);
+    verify(applicationRepository, never()).save(any(Application.class));
+  }
 
-        CandidateRepository candidateRepository =
-                mock(CandidateRepository.class);
+  @Test
+  void shouldThrowExceptionWhenJobDoesNotExist() {
 
-        JobRepository jobRepository =
-                mock(JobRepository.class);
+    ApplicationRepository applicationRepository = mock(ApplicationRepository.class);
 
-        ApplicationService applicationService =
-                new ApplicationService(
-                        applicationRepository,
-                        candidateRepository,
-                        jobRepository
-                );
+    CandidateRepository candidateRepository = mock(CandidateRepository.class);
 
-        CreateApplicationRequest request =
-                new CreateApplicationRequest();
+    JobRepository jobRepository = mock(JobRepository.class);
 
-        request.setCandidateId(1L);
-        request.setJobId(999L);
-        request.setStatus("APPLIED");
+    ApplicationService applicationService =
+        new ApplicationService(applicationRepository, candidateRepository, jobRepository);
 
-        when(candidateRepository.existsById(1L))
-                .thenReturn(true);
+    CreateApplicationRequest request = new CreateApplicationRequest();
 
-        when(jobRepository.existsById(999L))
-                .thenReturn(false);
+    request.setCandidateId(1L);
+    request.setJobId(999L);
+    request.setStatus("APPLIED");
 
-        assertThrows(
-                ResourceNotFoundException.class,
-                () -> applicationService.createApplication(request)
-        );
+    when(candidateRepository.existsById(1L)).thenReturn(true);
 
-        verify(applicationRepository, never())
-                .save(any(Application.class));
-    }
-    @Test
-    void shouldGetApplicationById() {
+    when(jobRepository.existsById(999L)).thenReturn(false);
 
-        ApplicationRepository applicationRepository =
-                mock(ApplicationRepository.class);
+    assertThrows(
+        ResourceNotFoundException.class, () -> applicationService.createApplication(request));
 
-        CandidateRepository candidateRepository =
-                mock(CandidateRepository.class);
+    verify(applicationRepository, never()).save(any(Application.class));
+  }
 
-        JobRepository jobRepository =
-                mock(JobRepository.class);
+  @Test
+  void shouldGetApplicationById() {
 
-        ApplicationService applicationService =
-                new ApplicationService(
-                        applicationRepository,
-                        candidateRepository,
-                        jobRepository
-                );
+    ApplicationRepository applicationRepository = mock(ApplicationRepository.class);
 
-        Application application =
-                new Application();
+    CandidateRepository candidateRepository = mock(CandidateRepository.class);
 
-        application.setId(1L);
-        application.setCandidateId(1L);
-        application.setJobId(1L);
-        application.setStatus("APPLIED");
+    JobRepository jobRepository = mock(JobRepository.class);
 
-        when(applicationRepository.findById(1L))
-                .thenReturn(Optional.of(application));
+    ApplicationService applicationService =
+        new ApplicationService(applicationRepository, candidateRepository, jobRepository);
 
-        Application result =
-                applicationService.getApplicationById(1L);
+    Application application = new Application();
 
-        assertEquals(1L, result.getId());
-        assertEquals("APPLIED", result.getStatus());
-    }
-    @Test
-    void shouldThrowExceptionWhenApplicationDoesNotExist() {
+    application.setId(1L);
+    application.setCandidateId(1L);
+    application.setJobId(1L);
+    application.setStatus("APPLIED");
 
-        ApplicationRepository applicationRepository =
-                mock(ApplicationRepository.class);
+    when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
 
-        CandidateRepository candidateRepository =
-                mock(CandidateRepository.class);
+    Application result = applicationService.getApplicationById(1L);
 
-        JobRepository jobRepository =
-                mock(JobRepository.class);
+    assertEquals(1L, result.getId());
+    assertEquals("APPLIED", result.getStatus());
+  }
 
-        ApplicationService applicationService =
-                new ApplicationService(
-                        applicationRepository,
-                        candidateRepository,
-                        jobRepository
-                );
+  @Test
+  void shouldThrowExceptionWhenApplicationDoesNotExist() {
 
-        when(applicationRepository.findById(999L))
-                .thenReturn(Optional.empty());
+    ApplicationRepository applicationRepository = mock(ApplicationRepository.class);
 
-        assertThrows(
-                ResourceNotFoundException.class,
-                () -> applicationService.getApplicationById(999L)
-        );
-    }
-    @Test
-    void shouldUpdateApplicationStatus() {
+    CandidateRepository candidateRepository = mock(CandidateRepository.class);
 
-        ApplicationRepository applicationRepository =
-                mock(ApplicationRepository.class);
+    JobRepository jobRepository = mock(JobRepository.class);
 
-        CandidateRepository candidateRepository =
-                mock(CandidateRepository.class);
+    ApplicationService applicationService =
+        new ApplicationService(applicationRepository, candidateRepository, jobRepository);
 
-        JobRepository jobRepository =
-                mock(JobRepository.class);
+    when(applicationRepository.findById(999L)).thenReturn(Optional.empty());
 
-        ApplicationService applicationService =
-                new ApplicationService(
-                        applicationRepository,
-                        candidateRepository,
-                        jobRepository
-                );
+    assertThrows(
+        ResourceNotFoundException.class, () -> applicationService.getApplicationById(999L));
+  }
 
-        Application existingApplication =
-                new Application();
+  @Test
+  void shouldUpdateApplicationStatus() {
 
-        existingApplication.setId(1L);
-        existingApplication.setCandidateId(1L);
-        existingApplication.setJobId(1L);
-        existingApplication.setStatus("APPLIED");
+    ApplicationRepository applicationRepository = mock(ApplicationRepository.class);
 
-        when(applicationRepository.findById(1L))
-                .thenReturn(Optional.of(existingApplication));
+    CandidateRepository candidateRepository = mock(CandidateRepository.class);
 
-        when(applicationRepository.save(any(Application.class)))
-                .thenReturn(existingApplication);
+    JobRepository jobRepository = mock(JobRepository.class);
 
-        com.example.jobapplicationapi.application.dto.UpdateApplicationRequest request =
-                new com.example.jobapplicationapi.application.dto.UpdateApplicationRequest();
+    ApplicationService applicationService =
+        new ApplicationService(applicationRepository, candidateRepository, jobRepository);
 
-        request.setStatus("INTERVIEW");
+    Application existingApplication = new Application();
 
-        Application result =
-                applicationService.updateApplication(
-                        1L,
-                        request
-                );
+    existingApplication.setId(1L);
+    existingApplication.setCandidateId(1L);
+    existingApplication.setJobId(1L);
+    existingApplication.setStatus("APPLIED");
 
-        assertEquals("INTERVIEW", result.getStatus());
+    when(applicationRepository.findById(1L)).thenReturn(Optional.of(existingApplication));
 
-        verify(applicationRepository)
-                .save(existingApplication);
-    }
+    when(applicationRepository.save(any(Application.class))).thenReturn(existingApplication);
+
+    com.example.jobapplicationapi.application.dto.UpdateApplicationRequest request =
+        new com.example.jobapplicationapi.application.dto.UpdateApplicationRequest();
+
+    request.setStatus("INTERVIEW");
+
+    Application result = applicationService.updateApplication(1L, request);
+
+    assertEquals("INTERVIEW", result.getStatus());
+
+    verify(applicationRepository).save(existingApplication);
+  }
 }

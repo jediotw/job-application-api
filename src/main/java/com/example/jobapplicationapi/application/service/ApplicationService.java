@@ -7,145 +7,107 @@ import com.example.jobapplicationapi.application.repository.ApplicationRepositor
 import com.example.jobapplicationapi.candidate.repository.CandidateRepository;
 import com.example.jobapplicationapi.exception.ResourceNotFoundException;
 import com.example.jobapplicationapi.job.repository.JobRepository;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ApplicationService {
 
-    private final ApplicationRepository applicationRepository;
-    private final CandidateRepository candidateRepository;
-    private final JobRepository jobRepository;
+  private final ApplicationRepository applicationRepository;
+  private final CandidateRepository candidateRepository;
+  private final JobRepository jobRepository;
 
-    public ApplicationService(
-            ApplicationRepository applicationRepository,
-            CandidateRepository candidateRepository,
-            JobRepository jobRepository) {
+  public ApplicationService(
+      ApplicationRepository applicationRepository,
+      CandidateRepository candidateRepository,
+      JobRepository jobRepository) {
 
-        this.applicationRepository = applicationRepository;
-        this.candidateRepository = candidateRepository;
-        this.jobRepository = jobRepository;
+    this.applicationRepository = applicationRepository;
+    this.candidateRepository = candidateRepository;
+    this.jobRepository = jobRepository;
+  }
+
+  public List<Application> getAllApplications() {
+
+    List<Application> applications = new ArrayList<>();
+
+    Iterable<Application> result = applicationRepository.findAll();
+
+    for (Application application : result) {
+      applications.add(application);
     }
 
-    public List<Application> getAllApplications() {
+    return applications;
+  }
 
-        List<Application> applications = new ArrayList<>();
+  public Application getApplicationById(Long id) {
 
-        Iterable<Application> result =
-                applicationRepository.findAll();
+    Optional<Application> result = applicationRepository.findById(id);
 
-        for (Application application : result) {
-            applications.add(application);
-        }
-
-        return applications;
+    if (!result.isPresent()) {
+      throw new ResourceNotFoundException("Application not found");
     }
 
-    public Application getApplicationById(Long id) {
+    return result.get();
+  }
 
-        Optional<Application> result =
-                applicationRepository.findById(id);
+  public Application createApplication(CreateApplicationRequest request) {
 
-        if (!result.isPresent()) {
-            throw new ResourceNotFoundException(
-                    "Application not found"
-            );
-        }
+    boolean candidateExists = candidateRepository.existsById(request.getCandidateId());
 
-        return result.get();
+    if (!candidateExists) {
+      throw new ResourceNotFoundException("Candidate not found");
     }
 
-    public Application createApplication(
-            CreateApplicationRequest request) {
+    boolean jobExists = jobRepository.existsById(request.getJobId());
 
-        boolean candidateExists =
-                candidateRepository.existsById(
-                        request.getCandidateId()
-                );
-
-        if (!candidateExists) {
-            throw new ResourceNotFoundException(
-                    "Candidate not found"
-            );
-        }
-
-        boolean jobExists =
-                jobRepository.existsById(
-                        request.getJobId()
-                );
-
-        if (!jobExists) {
-            throw new ResourceNotFoundException(
-                    "Job not found"
-            );
-        }
-
-        Application application = new Application();
-
-        application.setCandidateId(
-                request.getCandidateId()
-        );
-
-        application.setJobId(
-                request.getJobId()
-        );
-
-        application.setStatus(
-                request.getStatus()
-        );
-
-        application.setAppliedAt(
-                LocalDateTime.now()
-        );
-
-        Application savedApplication =
-                applicationRepository.save(application);
-
-        return savedApplication;
+    if (!jobExists) {
+      throw new ResourceNotFoundException("Job not found");
     }
 
-    public Application updateApplication(
-            Long id,
-            UpdateApplicationRequest request) {
+    Application application = new Application();
 
-        Optional<Application> result =
-                applicationRepository.findById(id);
+    application.setCandidateId(request.getCandidateId());
 
-        if (!result.isPresent()) {
-            throw new ResourceNotFoundException(
-                    "Application not found"
-            );
-        }
+    application.setJobId(request.getJobId());
 
-        Application existingApplication = result.get();
+    application.setStatus(request.getStatus());
 
-        existingApplication.setStatus(
-                request.getStatus()
-        );
+    application.setAppliedAt(LocalDateTime.now());
 
-        Application savedApplication =
-                applicationRepository.save(
-                        existingApplication
-                );
+    Application savedApplication = applicationRepository.save(application);
 
-        return savedApplication;
+    return savedApplication;
+  }
+
+  public Application updateApplication(Long id, UpdateApplicationRequest request) {
+
+    Optional<Application> result = applicationRepository.findById(id);
+
+    if (!result.isPresent()) {
+      throw new ResourceNotFoundException("Application not found");
     }
 
-    public void deleteApplication(Long id) {
+    Application existingApplication = result.get();
 
-        boolean exists =
-                applicationRepository.existsById(id);
+    existingApplication.setStatus(request.getStatus());
 
-        if (!exists) {
-            throw new ResourceNotFoundException(
-                    "Application not found"
-            );
-        }
+    Application savedApplication = applicationRepository.save(existingApplication);
 
-        applicationRepository.deleteById(id);
+    return savedApplication;
+  }
+
+  public void deleteApplication(Long id) {
+
+    boolean exists = applicationRepository.existsById(id);
+
+    if (!exists) {
+      throw new ResourceNotFoundException("Application not found");
     }
+
+    applicationRepository.deleteById(id);
+  }
 }

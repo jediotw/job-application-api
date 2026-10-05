@@ -1,5 +1,6 @@
 package com.example.jobapplicationapi.candidate;
 
+import com.example.jobapplicationapi.application.repository.ApplicationRepository;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.repository.CandidateRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,8 @@ public class CandidateIntegrationTest {
     @Autowired
     private CandidateRepository candidateRepository;
 
+    @Autowired
+    private ApplicationRepository applicationRepository;
 
     // ---------------------------------------------------------
     // Clean database before every test
@@ -36,6 +39,7 @@ public class CandidateIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
+        applicationRepository.deleteAll();
         candidateRepository.deleteAll();
     }
 

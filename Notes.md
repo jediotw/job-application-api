@@ -2098,3 +2098,109 @@ registerController(...)
 registerService(...)
 
 Spring does that.
+
+
+
+# Phase 4 — Application Module
+The relationship is:
+Candidate
+│
+│ candidate_id
+↓
+Application
+↑
+│ job_id
+│
+Job
+│
+└── company_id → Company
+
+So an application essentially says:
+Candidate X applied to Job Y with status Z.
+
+1. Database migration
+   Create:
+   src/main/resources/db/migration/V4__create_applications_table.sql
+
+Use:
+CREATE TABLE applications (
+id BIGSERIAL PRIMARY KEY,
+
+    candidate_id BIGINT NOT NULL,
+
+    job_id BIGINT NOT NULL,
+
+    status VARCHAR(50) NOT NULL,
+
+    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_applications_candidate
+        FOREIGN KEY (candidate_id)
+        REFERENCES candidates(id),
+
+    CONSTRAINT fk_applications_job
+        FOREIGN KEY (job_id)
+        REFERENCES jobs(id),
+
+    CONSTRAINT uq_application_candidate_job
+        UNIQUE (candidate_id, job_id)
+);
+
+Why these columns?
+Column	Purpose
+id	Application ID
+candidate_id	Which candidate applied
+job_id	Which job they applied to
+status	Current application state
+applied_at	When candidate applied
+created_at	Record creation timestamp
+updated_at	Last modification timestamp
+
+
+The important constraint is:
+UNIQUE (candidate_id, job_id)
+
+This means one candidate cannot apply to the same job twice.
+For example:
+candidate_id = 5
+job_id       = 10
+
+can exist only once.
+
+
+
+2. Application status
+   For now, keeping it as String.
+   Don't introduce Java enums yet.
+   We'll first get CRUD working, just like we did with employmentType.
+   Use values such as:
+   APPLIED
+   SCREENING
+   INTERVIEW
+   OFFER
+   REJECTED
+   WITHDRAWN
+
+Later we'll decide whether an enum and stricter database constraint make sense.
+
+# 6. Service
+This is where this module gets interesting.
+The service needs three repositories:
+ApplicationRepository
+CandidateRepository
+JobRepository
+
+Why?
+Before creating:
+Application(candidateId=1, jobId=5)
+
+we should verify:
+Candidate 1 exists?
+↓
+Job 5 exists?
+↓
+Create application

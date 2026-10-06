@@ -1,11 +1,15 @@
 package com.example.jobapplicationapi.job.service;
 
+import com.example.jobapplicationapi.company.model.Company;
 import com.example.jobapplicationapi.company.repository.CompanyRepository;
+import com.example.jobapplicationapi.exception.AuthorizationException;
 import com.example.jobapplicationapi.exception.ResourceNotFoundException;
 import com.example.jobapplicationapi.job.dto.CreateJobRequest;
 import com.example.jobapplicationapi.job.dto.UpdateJobRequest;
 import com.example.jobapplicationapi.job.model.Job;
 import com.example.jobapplicationapi.job.repository.JobRepository;
+import com.example.jobapplicationapi.user.model.User;
+import com.example.jobapplicationapi.user.service.UserService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -16,11 +20,14 @@ public class JobService {
 
   private final JobRepository jobRepository;
   private final CompanyRepository companyRepository;
+  private final UserService userService;
 
-  public JobService(JobRepository jobRepository, CompanyRepository companyRepository) {
+  public JobService(
+      JobRepository jobRepository, CompanyRepository companyRepository, UserService userService) {
 
     this.jobRepository = jobRepository;
     this.companyRepository = companyRepository;
+    this.userService = userService;
   }
 
   public List<Job> getAllJobs() {
@@ -49,10 +56,18 @@ public class JobService {
 
   public Job createJob(CreateJobRequest request) {
 
-    boolean companyExists = companyRepository.existsById(request.getCompanyId());
+    Optional<Company> companyResult = companyRepository.findById(request.getCompanyId());
 
-    if (!companyExists) {
+    if (!companyResult.isPresent()) {
       throw new ResourceNotFoundException("Company not found");
+    }
+
+    Company company = companyResult.get();
+
+    User currentUser = userService.getCurrentUser();
+
+    if (!currentUser.getId().equals(company.getRecruiterId())) {
+      throw new AuthorizationException("You are not allowed to create a job for this company");
     }
 
     Job job = new Job();
@@ -78,13 +93,32 @@ public class JobService {
       throw new ResourceNotFoundException("Job not found");
     }
 
-    boolean companyExists = companyRepository.existsById(request.getCompanyId());
+    Job existingJob = result.get();
 
-    if (!companyExists) {
+    User currentUser = userService.getCurrentUser();
+
+    Optional<Company> existingCompanyResult =
+        companyRepository.findById(existingJob.getCompanyId());
+
+    if (!existingCompanyResult.isPresent()) {
       throw new ResourceNotFoundException("Company not found");
     }
 
-    Job existingJob = result.get();
+    if (!currentUser.getId().equals(existingCompanyResult.get().getRecruiterId())) {
+      throw new AuthorizationException("You are not allowed to update this job");
+    }
+
+    Optional<Company> companyResult = companyRepository.findById(request.getCompanyId());
+
+    if (!companyResult.isPresent()) {
+      throw new ResourceNotFoundException("Company not found");
+    }
+
+    Company company = companyResult.get();
+
+    if (!currentUser.getId().equals(company.getRecruiterId())) {
+      throw new AuthorizationException("You are not allowed to update this job");
+    }
 
     existingJob.setCompanyId(request.getCompanyId());
     existingJob.setTitle(request.getTitle());
@@ -101,10 +135,26 @@ public class JobService {
 
   public void deleteJob(Long id) {
 
-    boolean exists = jobRepository.existsById(id);
+    Optional<Job> result = jobRepository.findById(id);
 
-    if (!exists) {
+    if (!result.isPresent()) {
       throw new ResourceNotFoundException("Job not found");
+    }
+
+    Job existingJob = result.get();
+
+    Optional<Company> companyResult = companyRepository.findById(existingJob.getCompanyId());
+
+    if (!companyResult.isPresent()) {
+      throw new ResourceNotFoundException("Company not found");
+    }
+
+    Company company = companyResult.get();
+
+    User currentUser = userService.getCurrentUser();
+
+    if (!currentUser.getId().equals(company.getRecruiterId())) {
+      throw new AuthorizationException("You are not allowed to delete this job");
     }
 
     jobRepository.deleteById(id);

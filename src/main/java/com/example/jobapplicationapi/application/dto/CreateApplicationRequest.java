@@ -5,21 +5,11 @@ import jakarta.validation.constraints.NotNull;
 
 public class CreateApplicationRequest {
 
-  @NotNull private Long candidateId;
-
   @NotNull private Long jobId;
 
   @NotBlank private String status;
 
   public CreateApplicationRequest() {}
-
-  public Long getCandidateId() {
-    return candidateId;
-  }
-
-  public void setCandidateId(Long candidateId) {
-    this.candidateId = candidateId;
-  }
 
   public Long getJobId() {
     return jobId;

@@ -48,6 +48,8 @@ public class ApplicationIntegrationTest {
 
   @Autowired private PasswordEncoder passwordEncoder;
 
+  private User currentUser;
+
   private String token;
 
   @BeforeEach
@@ -59,21 +61,25 @@ public class ApplicationIntegrationTest {
     companyRepository.deleteAll();
     userRepository.deleteAll();
 
+    currentUser = createUser("test@example.com", "password123", "CANDIDATE");
+
+    token = login("test@example.com", "password123");
+  }
+
+  private User createUser(String email, String password, String role) {
+
     User user = new User();
 
-    user.setEmail("test@example.com");
-    user.setPasswordHash(passwordEncoder.encode("password123"));
-    user.setRole("CANDIDATE");
+    user.setEmail(email);
+    user.setPasswordHash(passwordEncoder.encode(password));
+    user.setRole(role);
 
-    userRepository.save(user);
+    return userRepository.save(user);
+  }
 
-    String loginRequest =
-        """
-            {
-                "email": "test@example.com",
-                "password": "password123"
-            }
-            """;
+  private String login(String email, String password) throws Exception {
+
+    String loginRequest = String.format("{\"email\":\"%s\",\"password\":\"%s\"}", email, password);
 
     MvcResult result =
         mockMvc
@@ -88,44 +94,104 @@ public class ApplicationIntegrationTest {
 
     JsonNode responseJson = objectMapper.readTree(responseBody);
 
-    token = responseJson.get("token").asText();
+    return responseJson.get("token").asText();
+  }
+
+  private Company createCompany(Long recruiterId, String name, String cin) {
+
+    Company company = new Company();
+
+    company.setRecruiterId(recruiterId);
+    company.setName(name);
+    company.setCin(cin);
+    company.setWebsite("https://example.com");
+    company.setDescription("Technology company");
+
+    return companyRepository.save(company);
+  }
+
+  private Job createJob(Long companyId, String title) {
+
+    Job job = new Job();
+
+    job.setCompanyId(companyId);
+    job.setTitle(title);
+    job.setDescription("Build backend services");
+    job.setLocation("Bangalore");
+    job.setEmploymentType("FULL_TIME");
+
+    return jobRepository.save(job);
+  }
+
+  private Candidate createCandidate(Long userId, String name, String email) {
+
+    Candidate candidate = new Candidate();
+
+    candidate.setUserId(userId);
+    candidate.setName(name);
+    candidate.setEmail(email);
+    candidate.setPhone("9876543210");
+    candidate.setResumeUrl("https://example.com/resume");
+
+    return candidateRepository.save(candidate);
+  }
+
+  private Application createApplication(Long candidateId, Long jobId, String status) {
+
+    Application application = new Application();
+
+    application.setCandidateId(candidateId);
+    application.setJobId(jobId);
+    application.setStatus(status);
+    application.setAppliedAt(LocalDateTime.now());
+
+    return applicationRepository.save(application);
   }
 
   @Test
   void shouldCreateApplication() throws Exception {
 
-    Company company = new Company();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    company.setName("Google");
-    company.setCin("L12345DL202012345");
-    company.setWebsite("https://google.com");
-    company.setDescription("Technology company");
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
-    Company savedCompany = companyRepository.save(company);
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    Candidate candidate = new Candidate();
+    String requestBody =
+        "{" + "\"jobId\":" + savedJob.getId() + "," + "\"status\":\"APPLIED\"" + "}";
 
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-    candidate.setPhone("9876543210");
-    candidate.setResumeUrl("https://example.com/resume");
+    mockMvc
+        .perform(
+            post("/applications")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.candidateId").value(savedCandidate.getId()))
+        .andExpect(jsonPath("$.jobId").value(savedJob.getId()))
+        .andExpect(jsonPath("$.status").value("APPLIED"));
+  }
 
-    Candidate savedCandidate = candidateRepository.save(candidate);
+  @Test
+  void shouldDeriveCandidateIdFromAuthenticatedUser() throws Exception {
 
-    Job job = new Job();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    job.setCompanyId(savedCompany.getId());
-    job.setTitle("Backend Engineer");
-    job.setDescription("Build backend services");
-    job.setLocation("Bangalore");
-    job.setEmploymentType("FULL_TIME");
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
-    Job savedJob = jobRepository.save(job);
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
+
+    Candidate otherCandidate =
+        createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
 
     String requestBody =
         "{"
             + "\"candidateId\":"
-            + savedCandidate.getId()
+            + otherCandidate.getId()
             + ","
             + "\"jobId\":"
             + savedJob.getId()
@@ -141,36 +207,18 @@ public class ApplicationIntegrationTest {
                 .content(requestBody))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.candidateId").value(savedCandidate.getId()))
-        .andExpect(jsonPath("$.jobId").value(savedJob.getId()))
-        .andExpect(jsonPath("$.status").value("APPLIED"));
+        .andExpect(jsonPath("$.jobId").value(savedJob.getId()));
   }
 
   @Test
   void shouldReturn404WhenCandidateDoesNotExist() throws Exception {
 
-    Company company = new Company();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    company.setName("Google");
-    company.setCin("L12345DL202012345");
-
-    Company savedCompany = companyRepository.save(company);
-
-    Job job = new Job();
-
-    job.setCompanyId(savedCompany.getId());
-    job.setTitle("Backend Engineer");
-    job.setEmploymentType("FULL_TIME");
-
-    Job savedJob = jobRepository.save(job);
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
     String requestBody =
-        "{"
-            + "\"candidateId\":99999,"
-            + "\"jobId\":"
-            + savedJob.getId()
-            + ","
-            + "\"status\":\"APPLIED\""
-            + "}";
+        "{" + "\"jobId\":" + savedJob.getId() + "," + "\"status\":\"APPLIED\"" + "}";
 
     mockMvc
         .perform(
@@ -184,21 +232,9 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldReturn404WhenJobDoesNotExist() throws Exception {
 
-    Candidate candidate = new Candidate();
+    createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
-
-    String requestBody =
-        "{"
-            + "\"candidateId\":"
-            + savedCandidate.getId()
-            + ","
-            + "\"jobId\":99999,"
-            + "\"status\":\"APPLIED\""
-            + "}";
+    String requestBody = "{" + "\"jobId\":99999," + "\"status\":\"APPLIED\"" + "}";
 
     mockMvc
         .perform(
@@ -212,38 +248,15 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldGetAllApplications() throws Exception {
 
-    Company company = new Company();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    company.setName("Google");
-    company.setCin("L12345DL202012345");
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    Company savedCompany = companyRepository.save(company);
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
-
-    Job job = new Job();
-
-    job.setCompanyId(savedCompany.getId());
-    job.setTitle("Backend Engineer");
-    job.setEmploymentType("FULL_TIME");
-
-    Job savedJob = jobRepository.save(job);
-
-    Application application = new Application();
-
-    application.setCandidateId(savedCandidate.getId());
-
-    application.setJobId(savedJob.getId());
-
-    application.setStatus("APPLIED");
-    application.setAppliedAt(LocalDateTime.now());
-
-    Application savedApplication = applicationRepository.save(application);
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
 
     mockMvc
         .perform(get("/applications").header("Authorization", "Bearer " + token))
@@ -257,39 +270,15 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldGetApplicationById() throws Exception {
 
-    Company company = new Company();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    company.setName("Google");
-    company.setCin("L12345DL202012345");
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    Company savedCompany = companyRepository.save(company);
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
-
-    Job job = new Job();
-
-    job.setCompanyId(savedCompany.getId());
-    job.setTitle("Backend Engineer");
-    job.setEmploymentType("FULL_TIME");
-
-    Job savedJob = jobRepository.save(job);
-
-    Application application = new Application();
-
-    application.setCandidateId(savedCandidate.getId());
-
-    application.setJobId(savedJob.getId());
-
-    application.setStatus("APPLIED");
-
-    application.setAppliedAt(LocalDateTime.now());
-
-    Application savedApplication = applicationRepository.save(application);
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
 
     mockMvc
         .perform(
@@ -313,50 +302,17 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldUpdateApplication() throws Exception {
 
-    Company company = new Company();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    company.setName("Google");
-    company.setCin("L12345DL202012345");
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    Company savedCompany = companyRepository.save(company);
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
-    Candidate candidate = new Candidate();
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
 
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
-
-    Job job = new Job();
-
-    job.setCompanyId(savedCompany.getId());
-    job.setTitle("Backend Engineer");
-    job.setEmploymentType("FULL_TIME");
-
-    Job savedJob = jobRepository.save(job);
-
-    Application application = new Application();
-
-    application.setCandidateId(savedCandidate.getId());
-
-    application.setJobId(savedJob.getId());
-
-    application.setStatus("APPLIED");
-
-    application.setAppliedAt(LocalDateTime.now());
-
-    Application savedApplication = applicationRepository.save(application);
-
-    String requestBody =
-        "{"
-            + "\"candidateId\":"
-            + savedCandidate.getId()
-            + ","
-            + "\"jobId\":"
-            + savedJob.getId()
-            + ","
-            + "\"status\":\"INTERVIEW\""
-            + "}";
+    String requestBody = "{\"status\":\"INTERVIEW\"}";
 
     mockMvc
         .perform(
@@ -372,8 +328,7 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldReturn404WhenUpdatingMissingApplication() throws Exception {
 
-    String requestBody =
-        "{" + "\"candidateId\":1," + "\"jobId\":1," + "\"status\":\"INTERVIEW\"" + "}";
+    String requestBody = "{\"status\":\"INTERVIEW\"}";
 
     mockMvc
         .perform(
@@ -387,39 +342,15 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldDeleteApplication() throws Exception {
 
-    Company company = new Company();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    company.setName("Google");
-    company.setCin("L12345DL202012345");
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    Company savedCompany = companyRepository.save(company);
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
-
-    Job job = new Job();
-
-    job.setCompanyId(savedCompany.getId());
-    job.setTitle("Backend Engineer");
-    job.setEmploymentType("FULL_TIME");
-
-    Job savedJob = jobRepository.save(job);
-
-    Application application = new Application();
-
-    application.setCandidateId(savedCandidate.getId());
-
-    application.setJobId(savedJob.getId());
-
-    application.setStatus("APPLIED");
-
-    application.setAppliedAt(LocalDateTime.now());
-
-    Application savedApplication = applicationRepository.save(application);
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
 
     mockMvc
         .perform(
@@ -437,50 +368,17 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldReturn409WhenApplicationAlreadyExists() throws Exception {
 
-    Company company = new Company();
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
 
-    company.setName("Google");
-    company.setCin("L12345DL202012345");
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    Company savedCompany = companyRepository.save(company);
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
-
-    Job job = new Job();
-
-    job.setCompanyId(savedCompany.getId());
-    job.setTitle("Backend Engineer");
-    job.setEmploymentType("FULL_TIME");
-
-    Job savedJob = jobRepository.save(job);
-
-    Application application = new Application();
-
-    application.setCandidateId(savedCandidate.getId());
-
-    application.setJobId(savedJob.getId());
-
-    application.setStatus("APPLIED");
-
-    application.setAppliedAt(LocalDateTime.now());
-
-    applicationRepository.save(application);
+    createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
 
     String requestBody =
-        "{"
-            + "\"candidateId\":"
-            + savedCandidate.getId()
-            + ","
-            + "\"jobId\":"
-            + savedJob.getId()
-            + ","
-            + "\"status\":\"APPLIED\""
-            + "}";
+        "{" + "\"jobId\":" + savedJob.getId() + "," + "\"status\":\"APPLIED\"" + "}";
 
     mockMvc
         .perform(
@@ -489,5 +387,310 @@ public class ApplicationIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
         .andExpect(status().isConflict());
+  }
+
+  @Test
+  void shouldReturn403WhenReadingAnotherCandidatesApplication() throws Exception {
+
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
+
+    Candidate otherCandidate =
+        createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
+
+    Application otherApplication =
+        createApplication(otherCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    mockMvc
+        .perform(
+            get("/applications/" + otherApplication.getId())
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(get("/applications").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
+  void shouldReturn403WhenUpdatingAnotherCandidatesApplication() throws Exception {
+
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
+
+    Candidate otherCandidate =
+        createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
+
+    Application otherApplication =
+        createApplication(otherCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    String requestBody = "{\"status\":\"INTERVIEW\"}";
+
+    mockMvc
+        .perform(
+            put("/applications/" + otherApplication.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+        .andExpect(status().isForbidden());
+
+    Application unchangedApplication =
+        applicationRepository.findById(otherApplication.getId()).orElseThrow();
+
+    org.junit.jupiter.api.Assertions.assertEquals("APPLIED", unchangedApplication.getStatus());
+  }
+
+  @Test
+  void shouldReturn403WhenDeletingAnotherCandidatesApplication() throws Exception {
+
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
+
+    Candidate otherCandidate =
+        createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
+
+    Application otherApplication =
+        createApplication(otherCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    mockMvc
+        .perform(
+            delete("/applications/" + otherApplication.getId())
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+
+    org.junit.jupiter.api.Assertions.assertTrue(
+        applicationRepository.findById(otherApplication.getId()).isPresent());
+  }
+
+  @Test
+  void shouldAllowRecruiterToReadApplicationsForOwnCompany() throws Exception {
+
+    User recruiter = createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    Company savedCompany = createCompany(recruiter.getId(), "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    mockMvc
+        .perform(get("/applications").header("Authorization", "Bearer " + recruiterToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].id").value(savedApplication.getId()));
+
+    mockMvc
+        .perform(
+            get("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + recruiterToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(savedApplication.getId()));
+  }
+
+  @Test
+  void shouldReturn403WhenRecruiterReadsApplicationForAnotherRecruitersCompany() throws Exception {
+
+    User otherRecruiter = createUser("other.recruiter@example.com", "password123", "RECRUITER");
+
+    Company savedCompany = createCompany(otherRecruiter.getId(), "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    mockMvc
+        .perform(
+            get("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + recruiterToken))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(get("/applications").header("Authorization", "Bearer " + recruiterToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
+  void shouldAllowRecruiterToUpdateApplicationForOwnCompany() throws Exception {
+
+    User recruiter = createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    Company savedCompany = createCompany(recruiter.getId(), "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    String requestBody = "{\"status\":\"HIRED\"}";
+
+    mockMvc
+        .perform(
+            put("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + recruiterToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("HIRED"));
+  }
+
+  @Test
+  void shouldReturn403WhenRecruiterUpdatesApplicationForAnotherRecruitersCompany()
+      throws Exception {
+
+    User otherRecruiter = createUser("other.recruiter@example.com", "password123", "RECRUITER");
+
+    Company savedCompany = createCompany(otherRecruiter.getId(), "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    String requestBody = "{\"status\":\"HIRED\"}";
+
+    mockMvc
+        .perform(
+            put("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + recruiterToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+        .andExpect(status().isForbidden());
+
+    Application unchangedApplication =
+        applicationRepository.findById(savedApplication.getId()).orElseThrow();
+
+    org.junit.jupiter.api.Assertions.assertEquals("APPLIED", unchangedApplication.getStatus());
+  }
+
+  @Test
+  void shouldReturn403WhenRecruiterDeletesApplicationForAnotherRecruitersCompany()
+      throws Exception {
+
+    User otherRecruiter = createUser("other.recruiter@example.com", "password123", "RECRUITER");
+
+    Company savedCompany = createCompany(otherRecruiter.getId(), "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    mockMvc
+        .perform(
+            delete("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + recruiterToken))
+        .andExpect(status().isForbidden());
+
+    org.junit.jupiter.api.Assertions.assertTrue(
+        applicationRepository.findById(savedApplication.getId()).isPresent());
+  }
+
+  @Test
+  void shouldAllowRecruiterToDeleteApplicationForOwnCompany() throws Exception {
+
+    User recruiter = createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    Company savedCompany = createCompany(recruiter.getId(), "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
+
+    Application savedApplication =
+        createApplication(savedCandidate.getId(), savedJob.getId(), "APPLIED");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    mockMvc
+        .perform(
+            delete("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + recruiterToken))
+        .andExpect(status().isOk());
+
+    org.junit.jupiter.api.Assertions.assertTrue(
+        applicationRepository.findById(savedApplication.getId()).isEmpty());
+  }
+
+  @Test
+  void shouldReturn403WhenRecruiterCreatesApplication() throws Exception {
+
+    Company savedCompany = createCompany(null, "Google", "L12345DL202012345");
+
+    Job savedJob = createJob(savedCompany.getId(), "Backend Engineer");
+
+    createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    String requestBody = "{\"jobId\":" + savedJob.getId() + ",\"status\":\"APPLIED\"}";
+
+    mockMvc
+        .perform(
+            post("/applications")
+                .header("Authorization", "Bearer " + recruiterToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void shouldReturn401WhenNotAuthenticated() throws Exception {
+
+    mockMvc.perform(get("/applications")).andExpect(status().isUnauthorized());
+
+    mockMvc
+        .perform(get("/applications").header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isUnauthorized());
   }
 }

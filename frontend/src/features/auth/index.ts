@@ -1,1 +1,1 @@
-export {}
+export { isAuthenticated } from './session'

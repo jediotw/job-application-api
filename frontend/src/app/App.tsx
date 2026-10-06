@@ -1,9 +1,7 @@
+import AppRouter from './router'
+
 function App() {
-  return (
-    <main className="page">
-      <h1>Job Application Platform</h1>
-    </main>
-  )
+  return <AppRouter />
 }
 
 export default App

@@ -20,6 +20,9 @@ public class Company {
 
   private String description;
 
+  @Column("recruiter_id")
+  private Long recruiterId;
+
   @Column("created_at")
   @CreatedDate
   private LocalDateTime createdAt;
@@ -84,5 +87,13 @@ public class Company {
 
   public void setUpdatedAt(LocalDateTime updatedAt) {
     this.updatedAt = updatedAt;
+  }
+
+  public Long getRecruiterId() {
+    return recruiterId;
+  }
+
+  public void setRecruiterId(Long recruiterId) {
+    this.recruiterId = recruiterId;
   }
 }

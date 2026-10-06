@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.jobapplicationapi.application.repository.ApplicationRepository;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.repository.CandidateRepository;
+import com.example.jobapplicationapi.company.repository.CompanyRepository;
+import com.example.jobapplicationapi.job.repository.JobRepository;
 import com.example.jobapplicationapi.user.model.User;
 import com.example.jobapplicationapi.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,9 +37,15 @@ public class CandidateIntegrationTest {
 
   @Autowired private ApplicationRepository applicationRepository;
 
+  @Autowired private CompanyRepository companyRepository;
+
+  @Autowired private JobRepository jobRepository;
+
   @Autowired private UserRepository userRepository;
 
   @Autowired private PasswordEncoder passwordEncoder;
+
+  private User currentUser;
 
   private String token;
 
@@ -46,23 +54,29 @@ public class CandidateIntegrationTest {
 
     applicationRepository.deleteAll();
     candidateRepository.deleteAll();
+    jobRepository.deleteAll();
+    companyRepository.deleteAll();
     userRepository.deleteAll();
+
+    currentUser = createUser("test@example.com", "password123", "CANDIDATE");
+
+    token = login("test@example.com", "password123");
+  }
+
+  private User createUser(String email, String password, String role) {
 
     User user = new User();
 
-    user.setEmail("test@example.com");
-    user.setPasswordHash(passwordEncoder.encode("password123"));
-    user.setRole("CANDIDATE");
+    user.setEmail(email);
+    user.setPasswordHash(passwordEncoder.encode(password));
+    user.setRole(role);
 
-    userRepository.save(user);
+    return userRepository.save(user);
+  }
 
-    String loginRequest =
-        """
-            {
-                "email": "test@example.com",
-                "password": "password123"
-            }
-            """;
+  private String login(String email, String password) throws Exception {
+
+    String loginRequest = String.format("{\"email\":\"%s\",\"password\":\"%s\"}", email, password);
 
     MvcResult result =
         mockMvc
@@ -77,24 +91,37 @@ public class CandidateIntegrationTest {
 
     JsonNode responseJson = objectMapper.readTree(responseBody);
 
-    token = responseJson.get("token").asText();
+    return responseJson.get("token").asText();
+  }
+
+  private Candidate createCandidate(Long userId, String name, String email) {
+
+    Candidate candidate = new Candidate();
+
+    candidate.setUserId(userId);
+    candidate.setName(name);
+    candidate.setEmail(email);
+    candidate.setPhone("9876543210");
+    candidate.setResumeUrl("https://example.com/resume");
+
+    return candidateRepository.save(candidate);
   }
 
   @Test
   void shouldGetAllCandidates() throws Exception {
 
-    Candidate candidate = new Candidate();
+    Candidate candidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-    candidate.setPhone("9876543210");
-    candidate.setResumeUrl("https://example.com/resume");
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
 
-    candidateRepository.save(candidate);
+    createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
 
     mockMvc
         .perform(get("/candidates").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].id").value(candidate.getId()))
         .andExpect(jsonPath("$[0].name").value("Saurabh Kumar"))
         .andExpect(jsonPath("$[0].email").value("saurabh@example.com"));
   }
@@ -102,14 +129,8 @@ public class CandidateIntegrationTest {
   @Test
   void shouldGetCandidateById() throws Exception {
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-    candidate.setPhone("9876543210");
-    candidate.setResumeUrl("https://example.com/resume");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
     mockMvc
         .perform(
@@ -150,6 +171,12 @@ public class CandidateIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("Saurabh Kumar"))
         .andExpect(jsonPath("$.email").value("saurabh@example.com"));
+
+    Optional<Candidate> savedCandidate = candidateRepository.findByUserId(currentUser.getId());
+
+    org.junit.jupiter.api.Assertions.assertTrue(savedCandidate.isPresent());
+    org.junit.jupiter.api.Assertions.assertEquals(
+        "saurabh@example.com", savedCandidate.get().getEmail());
   }
 
   @Test
@@ -176,13 +203,7 @@ public class CandidateIntegrationTest {
   @Test
   void shouldReturn409WhenEmailAlreadyExists() throws Exception {
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Existing Candidate");
-    candidate.setEmail("existing@example.com");
-    candidate.setPhone("9876543210");
-
-    candidateRepository.save(candidate);
+    createCandidate(currentUser.getId(), "Existing Candidate", "existing@example.com");
 
     String requestJson =
         """
@@ -205,13 +226,7 @@ public class CandidateIntegrationTest {
   @Test
   void shouldUpdateCandidate() throws Exception {
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Old Name");
-    candidate.setEmail("old@example.com");
-    candidate.setPhone("9876543210");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
+    Candidate savedCandidate = createCandidate(currentUser.getId(), "Old Name", "old@example.com");
 
     String requestJson =
         """
@@ -260,13 +275,7 @@ public class CandidateIntegrationTest {
   @Test
   void shouldReturn400WhenUpdatingInvalidCandidate() throws Exception {
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Old Name");
-    candidate.setEmail("old@example.com");
-    candidate.setPhone("9876543210");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
+    Candidate savedCandidate = createCandidate(currentUser.getId(), "Old Name", "old@example.com");
 
     String requestJson =
         """
@@ -289,21 +298,10 @@ public class CandidateIntegrationTest {
   @Test
   void shouldReturn409WhenUpdatingWithExistingEmail() throws Exception {
 
-    Candidate firstCandidate = new Candidate();
+    createCandidate(currentUser.getId(), "First Candidate", "first@example.com");
 
-    firstCandidate.setName("First Candidate");
-    firstCandidate.setEmail("first@example.com");
-    firstCandidate.setPhone("1111111111");
-
-    candidateRepository.save(firstCandidate);
-
-    Candidate secondCandidate = new Candidate();
-
-    secondCandidate.setName("Second Candidate");
-    secondCandidate.setEmail("second@example.com");
-    secondCandidate.setPhone("2222222222");
-
-    Candidate savedSecondCandidate = candidateRepository.save(secondCandidate);
+    Candidate savedSecondCandidate =
+        createCandidate(currentUser.getId(), "Second Candidate", "second@example.com");
 
     String requestJson =
         """
@@ -326,13 +324,8 @@ public class CandidateIntegrationTest {
   @Test
   void shouldDeleteCandidate() throws Exception {
 
-    Candidate candidate = new Candidate();
-
-    candidate.setName("Saurabh Kumar");
-    candidate.setEmail("saurabh@example.com");
-    candidate.setPhone("9876543210");
-
-    Candidate savedCandidate = candidateRepository.save(candidate);
+    Candidate savedCandidate =
+        createCandidate(currentUser.getId(), "Saurabh Kumar", "saurabh@example.com");
 
     mockMvc
         .perform(
@@ -351,5 +344,108 @@ public class CandidateIntegrationTest {
     mockMvc
         .perform(delete("/candidates/999999").header("Authorization", "Bearer " + token))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void shouldReturn403WhenReadingAnotherCandidatesProfile() throws Exception {
+
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
+
+    Candidate otherCandidate =
+        createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
+
+    mockMvc
+        .perform(
+            get("/candidates/" + otherCandidate.getId()).header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void shouldReturn403WhenUpdatingAnotherCandidatesProfile() throws Exception {
+
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
+
+    Candidate otherCandidate =
+        createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
+
+    String requestJson =
+        """
+            {
+                "name": "Hacked Name",
+                "email": "hacked@example.com",
+                "phone": "9999999999",
+                "resumeUrl": "https://example.com/hacked"
+            }
+            """;
+
+    mockMvc
+        .perform(
+            put("/candidates/" + otherCandidate.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+        .andExpect(status().isForbidden());
+
+    Candidate unchangedCandidate =
+        candidateRepository.findById(otherCandidate.getId()).orElseThrow();
+
+    org.junit.jupiter.api.Assertions.assertEquals("Other Candidate", unchangedCandidate.getName());
+  }
+
+  @Test
+  void shouldReturn403WhenDeletingAnotherCandidatesProfile() throws Exception {
+
+    User otherUser = createUser("other@example.com", "password123", "CANDIDATE");
+
+    Candidate otherCandidate =
+        createCandidate(otherUser.getId(), "Other Candidate", "other@example.com");
+
+    mockMvc
+        .perform(
+            delete("/candidates/" + otherCandidate.getId())
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+
+    org.junit.jupiter.api.Assertions.assertTrue(
+        candidateRepository.findById(otherCandidate.getId()).isPresent());
+  }
+
+  @Test
+  void shouldReturn401WhenNotAuthenticated() throws Exception {
+
+    mockMvc.perform(get("/candidates")).andExpect(status().isUnauthorized());
+
+    mockMvc
+        .perform(get("/candidates").header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void shouldReturn403WhenRecruiterAccessesCandidateEndpoints() throws Exception {
+
+    createUser("recruiter@example.com", "password123", "RECRUITER");
+
+    String recruiterToken = login("recruiter@example.com", "password123");
+
+    mockMvc
+        .perform(get("/candidates").header("Authorization", "Bearer " + recruiterToken))
+        .andExpect(status().isForbidden());
+
+    String requestJson =
+        """
+            {
+                "name": "Recruiter Candidate",
+                "email": "recruiter.candidate@example.com",
+                "phone": "9876543210"
+            }
+            """;
+
+    mockMvc
+        .perform(
+            post("/candidates")
+                .header("Authorization", "Bearer " + recruiterToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+        .andExpect(status().isForbidden());
   }
 }

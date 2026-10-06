@@ -117,7 +117,6 @@ public class ApplicationControllerTest {
     String requestJson =
         """
             {
-                "candidateId": 1,
                 "jobId": 1,
                 "status": "APPLIED"
             }
@@ -138,7 +137,6 @@ public class ApplicationControllerTest {
     String requestJson =
         """
             {
-                "candidateId": null,
                 "jobId": null,
                 "status": ""
             }

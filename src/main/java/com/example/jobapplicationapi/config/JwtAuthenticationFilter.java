@@ -7,14 +7,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-@Component // Create and manage an instance of this class.So Spring can inject:JwtService
-// jwtService,UserRepository userRepository through the constructor.
-// It is a Spring-provided base class for filters that should execute once for a request.
+@Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtService jwtService;
@@ -39,18 +39,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     String token = authorizationHeader.substring(7);
 
-    String email = jwtService.extractEmail(token);
+    String email;
+
+    try {
+      email = jwtService.extractEmail(token);
+    } catch (RuntimeException exception) {
+      filterChain.doFilter(request, response);
+      return;
+    }
 
     User user = userRepository.findByEmail(email).orElse(null);
 
     if (user != null) {
       UsernamePasswordAuthenticationToken authentication =
           new UsernamePasswordAuthenticationToken(
-              user.getEmail(), null, java.util.Collections.emptyList());
+              user.getEmail(), null, List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
 
       SecurityContextHolder.getContext().setAuthentication(authentication);
     }
-    // I've finished processing the request. Continue to the next filter/controller.
+
     filterChain.doFilter(request, response);
   }
 }

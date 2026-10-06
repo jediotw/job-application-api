@@ -9,6 +9,8 @@ import com.example.jobapplicationapi.user.dto.RegisterRequest;
 import com.example.jobapplicationapi.user.dto.UserResponse;
 import com.example.jobapplicationapi.user.model.User;
 import com.example.jobapplicationapi.user.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -63,5 +65,16 @@ public class UserService {
     String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
 
     return new LoginResponse(token, user.getId(), user.getEmail(), user.getRole());
+  }
+
+  public User getCurrentUser() {
+
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+    String email = authentication.getName();
+
+    return userRepository
+        .findByEmail(email)
+        .orElseThrow(() -> new AuthenticationException("Authenticated user not found"));
   }
 }

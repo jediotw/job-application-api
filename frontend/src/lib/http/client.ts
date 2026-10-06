@@ -5,6 +5,8 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\
 
 export type QueryParams = Record<string, string | number | boolean | undefined>
 
+export type AuthTokenProvider = () => string | null | undefined
+
 export interface ResponseInfo {
   status: number
   sentRequestId: string
@@ -21,10 +23,15 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 export class HttpClient {
   private readonly baseUrl: string
   private readonly fetchFn: typeof fetch
+  private authTokenProvider: AuthTokenProvider | null = null
 
   constructor(baseUrl: string = API_BASE_URL, fetchFn: typeof fetch = globalThis.fetch.bind(globalThis)) {
     this.baseUrl = baseUrl.replace(/\/+$/, '')
     this.fetchFn = fetchFn
+  }
+
+  setAuthTokenProvider(provider: AuthTokenProvider | null): void {
+    this.authTokenProvider = provider
   }
 
   get<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -98,6 +105,11 @@ export class HttpClient {
     }
     if (body !== undefined && !result.has('Content-Type')) {
       result.set('Content-Type', 'application/json')
+    }
+
+    const token = this.authTokenProvider?.()
+    if (token && !result.has('Authorization')) {
+      result.set('Authorization', `Bearer ${token}`)
     }
 
     return result

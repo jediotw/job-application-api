@@ -1,5 +1,11 @@
 export type Role = 'CANDIDATE' | 'RECRUITER'
 
+export interface AuthUser {
+  id: number
+  email: string
+  role: Role
+}
+
 export interface RegisterRequest {
   email: string
   password: string

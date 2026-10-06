@@ -2204,3 +2204,151 @@ Candidate 1 exists?
 Job 5 exists?
 ↓
 Create application
+
+
+
+# since my design choice is to not use candidate as authentication account
+instead we are using user model for authentication.Then later we can associate a user with a candidate:
+Why?
+Because authentication identity and business/domain identity are different concerns.
+A user answers:
+"Who are you?"
+
+A candidate answers:
+"What candidate record belongs to you?"
+
+This separation becomes very useful once we add roles such as:
+CANDIDATE
+RECRUITER
+ADMIN
+
+
+
+POST /auth/login
+│
+▼
+credentials verified
+│
+▼
+generate JWT
+│
+▼
+{
+sub: user-id,
+role: CANDIDATE
+}
+│
+▼
+client receives token
+│
+▼
+Authorization: Bearer <token>
+│
+▼
+Spring Security
+│
+├── token valid? ── NO → 401
+│
+└── YES
+│
+▼
+authenticated user
+│
+▼
+Controller
+
+
+# JWT introduction
+                    REGISTER
+                       │
+                       ▼
+                 User in DB
+                       │
+                       │
+                    LOGIN
+                       │
+              email + password
+                       │
+                       ▼
+                 verify BCrypt
+                       │
+                       ▼
+                  create JWT
+                       │
+                       ▼
+             return token to client
+                       │
+                       │
+              Authorization:
+              Bearer <token>
+                       │
+                       ▼
+              Spring Security
+                       │
+                validate JWT
+                       │
+                       ▼
+                 Controller
+
+Step 1: Add JWT dependency
+Since we're using Spring Boot 3.4.4 and Java 17, let's use JJWT.
+Add these three dependencies inside <dependencies>:
+<dependency>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt-api</artifactId>
+<version>0.12.6</version>
+</dependency>
+
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+
+Why three dependencies?
+JJWT separates the API from its implementation:
+jjwt-api
+↓
+classes we write code against
+
+jjwt-impl
+↓
+actual JWT implementation
+
+jjwt-jackson
+↓
+JSON serialization/deserialization
+
+                 AUTHENTICATION
+                       │
+       ┌───────────────┴───────────────┐
+       │                               │
+Register                          Login
+│                               │
+▼                               ▼
+Password hash                  Verify password
+│                               │
+▼                               ▼
+Database                      Generate JWT
+│
+▼
+Client
+│
+│ JWT
+▼
+JWT Authentication
+Filter
+│
+▼
+SecurityContext
+│
+▼
+Authenticated

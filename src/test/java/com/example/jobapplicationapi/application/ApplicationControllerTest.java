@@ -8,22 +8,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.jobapplicationapi.application.controller.ApplicationController;
 import com.example.jobapplicationapi.application.model.Application;
 import com.example.jobapplicationapi.application.service.ApplicationService;
+import com.example.jobapplicationapi.config.JwtService;
 import com.example.jobapplicationapi.exception.ResourceNotFoundException;
+import com.example.jobapplicationapi.user.repository.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ApplicationController.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class ApplicationControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private ApplicationService applicationService;
+  @MockitoBean private JwtService jwtService;
+  @MockitoBean private UserRepository userRepository;
 
   @Test
   void shouldGetAllApplications() throws Exception {

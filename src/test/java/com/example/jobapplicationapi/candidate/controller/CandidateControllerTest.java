@@ -17,18 +17,22 @@ import com.example.jobapplicationapi.candidate.dto.CreateCandidateRequest;
 import com.example.jobapplicationapi.candidate.dto.UpdateCandidateRequest;
 import com.example.jobapplicationapi.candidate.model.Candidate;
 import com.example.jobapplicationapi.candidate.service.CandidateService;
+import com.example.jobapplicationapi.config.JwtService;
 import com.example.jobapplicationapi.exception.ResourceNotFoundException;
+import com.example.jobapplicationapi.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CandidateController.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class CandidateControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -36,6 +40,10 @@ public class CandidateControllerTest {
   @MockitoBean private CandidateService candidateService;
 
   @Autowired private ObjectMapper objectMapper;
+
+  @MockitoBean private JwtService jwtService;
+
+  @MockitoBean private UserRepository userRepository;
 
   // ---------------------------------------------------------
   // GET /candidates

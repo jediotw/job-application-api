@@ -15,6 +15,10 @@ import com.example.jobapplicationapi.company.model.Company;
 import com.example.jobapplicationapi.company.repository.CompanyRepository;
 import com.example.jobapplicationapi.job.model.Job;
 import com.example.jobapplicationapi.job.repository.JobRepository;
+import com.example.jobapplicationapi.user.model.User;
+import com.example.jobapplicationapi.user.repository.UserRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -38,18 +44,58 @@ public class ApplicationIntegrationTest {
 
   @Autowired private JobRepository jobRepository;
 
+  @Autowired private UserRepository userRepository;
+
+  @Autowired private PasswordEncoder passwordEncoder;
+
+  private String token;
+
   @BeforeEach
-  void cleanDatabase() {
+  void cleanDatabase() throws Exception {
+
     applicationRepository.deleteAll();
-    jobRepository.deleteAll();
     candidateRepository.deleteAll();
+    jobRepository.deleteAll();
     companyRepository.deleteAll();
+    userRepository.deleteAll();
+
+    User user = new User();
+
+    user.setEmail("test@example.com");
+    user.setPasswordHash(passwordEncoder.encode("password123"));
+    user.setRole("CANDIDATE");
+
+    userRepository.save(user);
+
+    String loginRequest =
+        """
+            {
+                "email": "test@example.com",
+                "password": "password123"
+            }
+            """;
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/auth/login").contentType(MediaType.APPLICATION_JSON).content(loginRequest))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String responseBody = result.getResponse().getContentAsString();
+
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    JsonNode responseJson = objectMapper.readTree(responseBody);
+
+    token = responseJson.get("token").asText();
   }
 
   @Test
   void shouldCreateApplication() throws Exception {
 
     Company company = new Company();
+
     company.setName("Google");
     company.setCin("L12345DL202012345");
     company.setWebsite("https://google.com");
@@ -58,6 +104,7 @@ public class ApplicationIntegrationTest {
     Company savedCompany = companyRepository.save(company);
 
     Candidate candidate = new Candidate();
+
     candidate.setName("Saurabh Kumar");
     candidate.setEmail("saurabh@example.com");
     candidate.setPhone("9876543210");
@@ -66,6 +113,7 @@ public class ApplicationIntegrationTest {
     Candidate savedCandidate = candidateRepository.save(candidate);
 
     Job job = new Job();
+
     job.setCompanyId(savedCompany.getId());
     job.setTitle("Backend Engineer");
     job.setDescription("Build backend services");
@@ -86,7 +134,11 @@ public class ApplicationIntegrationTest {
             + "}";
 
     mockMvc
-        .perform(post("/applications").contentType(MediaType.APPLICATION_JSON).content(requestBody))
+        .perform(
+            post("/applications")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.candidateId").value(savedCandidate.getId()))
         .andExpect(jsonPath("$.jobId").value(savedJob.getId()))
@@ -97,12 +149,14 @@ public class ApplicationIntegrationTest {
   void shouldReturn404WhenCandidateDoesNotExist() throws Exception {
 
     Company company = new Company();
+
     company.setName("Google");
     company.setCin("L12345DL202012345");
 
     Company savedCompany = companyRepository.save(company);
 
     Job job = new Job();
+
     job.setCompanyId(savedCompany.getId());
     job.setTitle("Backend Engineer");
     job.setEmploymentType("FULL_TIME");
@@ -119,7 +173,11 @@ public class ApplicationIntegrationTest {
             + "}";
 
     mockMvc
-        .perform(post("/applications").contentType(MediaType.APPLICATION_JSON).content(requestBody))
+        .perform(
+            post("/applications")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
         .andExpect(status().isNotFound());
   }
 
@@ -127,6 +185,7 @@ public class ApplicationIntegrationTest {
   void shouldReturn404WhenJobDoesNotExist() throws Exception {
 
     Candidate candidate = new Candidate();
+
     candidate.setName("Saurabh Kumar");
     candidate.setEmail("saurabh@example.com");
 
@@ -142,7 +201,11 @@ public class ApplicationIntegrationTest {
             + "}";
 
     mockMvc
-        .perform(post("/applications").contentType(MediaType.APPLICATION_JSON).content(requestBody))
+        .perform(
+            post("/applications")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
         .andExpect(status().isNotFound());
   }
 
@@ -150,18 +213,21 @@ public class ApplicationIntegrationTest {
   void shouldGetAllApplications() throws Exception {
 
     Company company = new Company();
+
     company.setName("Google");
     company.setCin("L12345DL202012345");
 
     Company savedCompany = companyRepository.save(company);
 
     Candidate candidate = new Candidate();
+
     candidate.setName("Saurabh Kumar");
     candidate.setEmail("saurabh@example.com");
 
     Candidate savedCandidate = candidateRepository.save(candidate);
 
     Job job = new Job();
+
     job.setCompanyId(savedCompany.getId());
     job.setTitle("Backend Engineer");
     job.setEmploymentType("FULL_TIME");
@@ -169,15 +235,18 @@ public class ApplicationIntegrationTest {
     Job savedJob = jobRepository.save(job);
 
     Application application = new Application();
+
     application.setCandidateId(savedCandidate.getId());
+
     application.setJobId(savedJob.getId());
+
     application.setStatus("APPLIED");
     application.setAppliedAt(LocalDateTime.now());
 
     Application savedApplication = applicationRepository.save(application);
 
     mockMvc
-        .perform(get("/applications"))
+        .perform(get("/applications").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(savedApplication.getId()))
         .andExpect(jsonPath("$[0].candidateId").value(savedCandidate.getId()))
@@ -189,18 +258,21 @@ public class ApplicationIntegrationTest {
   void shouldGetApplicationById() throws Exception {
 
     Company company = new Company();
+
     company.setName("Google");
     company.setCin("L12345DL202012345");
 
     Company savedCompany = companyRepository.save(company);
 
     Candidate candidate = new Candidate();
+
     candidate.setName("Saurabh Kumar");
     candidate.setEmail("saurabh@example.com");
 
     Candidate savedCandidate = candidateRepository.save(candidate);
 
     Job job = new Job();
+
     job.setCompanyId(savedCompany.getId());
     job.setTitle("Backend Engineer");
     job.setEmploymentType("FULL_TIME");
@@ -208,17 +280,21 @@ public class ApplicationIntegrationTest {
     Job savedJob = jobRepository.save(job);
 
     Application application = new Application();
+
     application.setCandidateId(savedCandidate.getId());
+
     application.setJobId(savedJob.getId());
+
     application.setStatus("APPLIED");
 
-    // applications.applied_at is NOT NULL
     application.setAppliedAt(LocalDateTime.now());
 
     Application savedApplication = applicationRepository.save(application);
 
     mockMvc
-        .perform(get("/applications/" + savedApplication.getId()))
+        .perform(
+            get("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(savedApplication.getId()))
         .andExpect(jsonPath("$.candidateId").value(savedCandidate.getId()))
@@ -229,25 +305,30 @@ public class ApplicationIntegrationTest {
   @Test
   void shouldReturn404WhenApplicationDoesNotExist() throws Exception {
 
-    mockMvc.perform(get("/applications/99999")).andExpect(status().isNotFound());
+    mockMvc
+        .perform(get("/applications/99999").header("Authorization", "Bearer " + token))
+        .andExpect(status().isNotFound());
   }
 
   @Test
   void shouldUpdateApplication() throws Exception {
 
     Company company = new Company();
+
     company.setName("Google");
     company.setCin("L12345DL202012345");
 
     Company savedCompany = companyRepository.save(company);
 
     Candidate candidate = new Candidate();
+
     candidate.setName("Saurabh Kumar");
     candidate.setEmail("saurabh@example.com");
 
     Candidate savedCandidate = candidateRepository.save(candidate);
 
     Job job = new Job();
+
     job.setCompanyId(savedCompany.getId());
     job.setTitle("Backend Engineer");
     job.setEmploymentType("FULL_TIME");
@@ -255,11 +336,13 @@ public class ApplicationIntegrationTest {
     Job savedJob = jobRepository.save(job);
 
     Application application = new Application();
+
     application.setCandidateId(savedCandidate.getId());
+
     application.setJobId(savedJob.getId());
+
     application.setStatus("APPLIED");
 
-    // applications.applied_at is NOT NULL
     application.setAppliedAt(LocalDateTime.now());
 
     Application savedApplication = applicationRepository.save(application);
@@ -278,6 +361,7 @@ public class ApplicationIntegrationTest {
     mockMvc
         .perform(
             put("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
         .andExpect(status().isOk())
@@ -293,7 +377,10 @@ public class ApplicationIntegrationTest {
 
     mockMvc
         .perform(
-            put("/applications/99999").contentType(MediaType.APPLICATION_JSON).content(requestBody))
+            put("/applications/99999")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
         .andExpect(status().isNotFound());
   }
 
@@ -301,18 +388,21 @@ public class ApplicationIntegrationTest {
   void shouldDeleteApplication() throws Exception {
 
     Company company = new Company();
+
     company.setName("Google");
     company.setCin("L12345DL202012345");
 
     Company savedCompany = companyRepository.save(company);
 
     Candidate candidate = new Candidate();
+
     candidate.setName("Saurabh Kumar");
     candidate.setEmail("saurabh@example.com");
 
     Candidate savedCandidate = candidateRepository.save(candidate);
 
     Job job = new Job();
+
     job.setCompanyId(savedCompany.getId());
     job.setTitle("Backend Engineer");
     job.setEmploymentType("FULL_TIME");
@@ -320,19 +410,27 @@ public class ApplicationIntegrationTest {
     Job savedJob = jobRepository.save(job);
 
     Application application = new Application();
+
     application.setCandidateId(savedCandidate.getId());
+
     application.setJobId(savedJob.getId());
+
     application.setStatus("APPLIED");
 
-    // applications.applied_at is NOT NULL
     application.setAppliedAt(LocalDateTime.now());
 
     Application savedApplication = applicationRepository.save(application);
 
-    mockMvc.perform(delete("/applications/" + savedApplication.getId())).andExpect(status().isOk());
+    mockMvc
+        .perform(
+            delete("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
 
     mockMvc
-        .perform(get("/applications/" + savedApplication.getId()))
+        .perform(
+            get("/applications/" + savedApplication.getId())
+                .header("Authorization", "Bearer " + token))
         .andExpect(status().isNotFound());
   }
 
@@ -340,18 +438,21 @@ public class ApplicationIntegrationTest {
   void shouldReturn409WhenApplicationAlreadyExists() throws Exception {
 
     Company company = new Company();
+
     company.setName("Google");
     company.setCin("L12345DL202012345");
 
     Company savedCompany = companyRepository.save(company);
 
     Candidate candidate = new Candidate();
+
     candidate.setName("Saurabh Kumar");
     candidate.setEmail("saurabh@example.com");
 
     Candidate savedCandidate = candidateRepository.save(candidate);
 
     Job job = new Job();
+
     job.setCompanyId(savedCompany.getId());
     job.setTitle("Backend Engineer");
     job.setEmploymentType("FULL_TIME");
@@ -359,11 +460,13 @@ public class ApplicationIntegrationTest {
     Job savedJob = jobRepository.save(job);
 
     Application application = new Application();
+
     application.setCandidateId(savedCandidate.getId());
+
     application.setJobId(savedJob.getId());
+
     application.setStatus("APPLIED");
 
-    // applications.applied_at is NOT NULL
     application.setAppliedAt(LocalDateTime.now());
 
     applicationRepository.save(application);
@@ -380,7 +483,11 @@ public class ApplicationIntegrationTest {
             + "}";
 
     mockMvc
-        .perform(post("/applications").contentType(MediaType.APPLICATION_JSON).content(requestBody))
+        .perform(
+            post("/applications")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
         .andExpect(status().isConflict());
   }
 }

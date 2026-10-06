@@ -98,4 +98,15 @@ public class GlobalExceptionHandler {
 
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
   }
+
+  @ExceptionHandler(DataConflictException.class)
+  public ResponseEntity<String> handleDataConflict(DataConflictException exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(exception.getMessage());
+  }
+
+  @ExceptionHandler(AuthenticationException.class)
+  public ResponseEntity<String> handleAuthenticationException(AuthenticationException exception) {
+
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(exception.getMessage());
+  }
 }

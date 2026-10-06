@@ -1,8 +1,13 @@
 spring:
   application:
     name: job-application-api
+
   datasource:
     url: jdbc:postgresql://localhost:5432/job_application
     username: postgres
     password: mysecretpassword
     driver-class-name: org.postgresql.Driver
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId=%X{requestId}] %logger{36} - %msg%n"

@@ -2352,3 +2352,44 @@ SecurityContext
 │
 ▼
 Authenticated
+
+
+# reuest id 
+                    HTTP REQUEST
+                         │
+                         ▼
+              ┌────────────────────┐
+              │  RequestIdFilter   │
+              └─────────┬──────────┘
+                        │
+                X-Request-ID?
+                   /          \
+                 yes           no
+                  │             │
+                  │       UUID.randomUUID()
+                  │             │
+                  └──────┬──────┘
+                         │
+                         ▼
+                 requestId = abc
+                         │
+             ┌───────────┴───────────┐
+             │                       │
+             ▼                       ▼
+      Response Header               MDC
+      X-Request-ID: abc        requestId = abc
+                                     │
+                                     ▼
+                              Controller
+                                     │
+                                     ▼
+                                Service
+                                     │
+                                     ▼
+                               Repository
+                                     │
+                                     ▼
+                                  Logger
+                                     │
+                                     ▼
+                          [requestId=abc]

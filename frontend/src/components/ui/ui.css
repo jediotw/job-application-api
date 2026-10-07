@@ -176,3 +176,9 @@
 .ui-empty__actions {
   margin-top: 0.5rem;
 }
+
+.ui-textarea {
+  min-height: 6rem;
+  resize: vertical;
+  line-height: 1.5;
+}

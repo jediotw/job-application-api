@@ -8,9 +8,19 @@ interface JobCardProps {
   onEdit?: () => void
   onDelete?: () => void
   deleting?: boolean
+  onApply?: () => void
+  applying?: boolean
 }
 
-function JobCard({ job, recruiter, onEdit, onDelete, deleting = false }: JobCardProps) {
+function JobCard({
+  job,
+  recruiter,
+  onEdit,
+  onDelete,
+  deleting = false,
+  onApply,
+  applying = false,
+}: JobCardProps) {
   const salary =
     job.salaryMin !== null || job.salaryMax !== null
       ? `${job.salaryMin ?? '—'} – ${job.salaryMax ?? '—'}`
@@ -28,6 +38,11 @@ function JobCard({ job, recruiter, onEdit, onDelete, deleting = false }: JobCard
       </dl>
       <div className="page-actions">
         <Link to={`/jobs/${job.id}`}>View details</Link>
+        {!recruiter && onApply ? (
+          <Button onClick={onApply} disabled={applying}>
+            {applying ? 'Applying…' : 'Apply'}
+          </Button>
+        ) : null}
         {recruiter && onEdit ? <Button variant="secondary" onClick={onEdit}>Edit</Button> : null}
         {recruiter && onDelete ? (
           <Button variant="ghost" onClick={onDelete} disabled={deleting}>

@@ -4,6 +4,8 @@ import { Alert, ApiErrorState, Button, Card, EmptyState, Loading } from '../../.
 import { listCompanies } from '../../companies/api'
 import type { Company } from '../../companies/types'
 import { useAuth } from '../../auth'
+import { createApplication } from '../../applications/api'
+import { toApplicationError } from '../../applications/errors'
 import { getJob } from '../api'
 import JobCard from '../components/JobCard'
 import JobForm from '../components/JobForm'
@@ -29,6 +31,7 @@ function JobsPage() {
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [applyingJobId, setApplyingJobId] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [formKey, setFormKey] = useState(0)
 
@@ -92,6 +95,21 @@ function JobsPage() {
       cancelled = true
     }
   }, [id])
+
+  async function handleApply(jobId: number) {
+    setNotice(null)
+    setFormError(null)
+    setApplyingJobId(jobId)
+
+    try {
+      await createApplication({ jobId, status: 'APPLIED' })
+      setNotice('Application submitted successfully.')
+    } catch (err: unknown) {
+      setFormError(toApplicationError(err, 'Unable to submit the application.').message)
+    } finally {
+      setApplyingJobId(null)
+    }
+  }
 
   async function handleCreateOrUpdate(request: Parameters<typeof create>[0]) {
     setSubmitting(true)
@@ -160,9 +178,12 @@ function JobsPage() {
         {!detailLoading && !detailError && selectedJob ? (
           <>
             {notice ? <Alert variant="success" title="Success">{notice}</Alert> : null}
+            {formError ? <Alert variant="error" title="Application failed">{formError}</Alert> : null}
             <JobCard
               job={selectedJob}
               recruiter={isRecruiter}
+              onApply={!isRecruiter ? () => void handleApply(selectedJob.id) : undefined}
+              applying={applyingJobId === selectedJob.id}
               onEdit={isRecruiter ? () => startEdit(selectedJob) : undefined}
               onDelete={isRecruiter ? () => void handleDelete(selectedJob) : undefined}
               deleting={deletingId === selectedJob.id}
@@ -251,6 +272,8 @@ function JobsPage() {
             key={job.id}
             job={job}
             recruiter={isRecruiter}
+            onApply={!isRecruiter ? () => void handleApply(job.id) : undefined}
+            applying={applyingJobId === job.id}
             onEdit={isRecruiter ? () => startEdit(job) : undefined}
             onDelete={isRecruiter ? () => void handleDelete(job) : undefined}
             deleting={deletingId === job.id}

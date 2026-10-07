@@ -3,10 +3,23 @@ spring:
     name: job-application-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/job_application
-    username: postgres
-    password: mysecretpassword
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/job_application}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:${SERVER_PORT:8080}}
+  address: 0.0.0.0
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
+jwt:
+  secret: ${JWT_SECRET}
 
 logging:
   pattern:

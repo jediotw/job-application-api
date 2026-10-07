@@ -1,6 +1,9 @@
+export { AuthProvider, useAuth } from './AuthContext'
+export type { AuthContextValue } from './AuthContext'
 export { isAuthenticated } from './session'
 export { login, register } from './api'
 export type {
+  AuthUser,
   LoginRequest,
   LoginResponse,
   RegisterRequest,

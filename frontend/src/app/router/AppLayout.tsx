@@ -39,6 +39,10 @@ function AppLayout() {
         <main className="public-content">
           <Outlet />
         </main>
+        <footer className="site-footer">
+          <HRiringLogo to="/login" compact />
+          <span>© 2026 HRiring</span>
+        </footer>
       </div>
     )
   }
@@ -80,6 +84,10 @@ function AppLayout() {
         <main className="layout-content">
           <Outlet />
         </main>
+        <footer className="site-footer">
+          <HRiringLogo compact />
+          <span>© 2026 HRiring</span>
+        </footer>
       </div>
     </div>
   )

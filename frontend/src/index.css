@@ -194,3 +194,15 @@ a:hover { color: var(--hr-blue-dark); }
   .dashboard-stats { grid-template-columns: 1fr; }
   .dashboard-stat { min-height: 88px; }
 }
+
+.site-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  min-height: 68px; padding: 1rem 2.25rem; border-top: 1px solid var(--hr-border);
+  background: var(--hr-surface); color: #97a3b4; font-size: .72rem;
+}
+.site-footer .hriring-brand { font-size: .88rem; }
+.site-footer .hriring-logo { width: 23px; height: 23px; }
+.public-layout .site-footer { padding-inline: 5vw; }
+@media (max-width: 640px) {
+  .site-footer { padding-inline: 1rem; }
+}

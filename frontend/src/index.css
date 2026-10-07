@@ -61,38 +61,29 @@ a {
   gap: 0.75rem;
 }
 
-.candidate-fields {
+.candidate-fields,
+.company-fields,
+.application-fields,
+.job-fields {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.5rem 1.25rem;
   margin: 0;
 }
 
-.candidate-fields dt {
+.candidate-fields dt,
+.company-fields dt,
+.application-fields dt,
+.job-fields dt {
   color: #52525b;
   font-size: 0.925rem;
   font-weight: 600;
 }
 
-.candidate-fields dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.company-fields {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 0.5rem 1.25rem;
-  margin: 0;
-}
-
-.company-fields dt {
-  color: #52525b;
-  font-size: 0.925rem;
-  font-weight: 600;
-}
-
-.company-fields dd {
+.candidate-fields dd,
+.company-fields dd,
+.application-fields dd,
+.job-fields dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -102,6 +93,7 @@ a {
   justify-content: center;
   gap: 0.75rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
 .ui-alert + .ui-alert,
@@ -112,20 +104,37 @@ a {
   margin-top: 1rem;
 }
 
-.application-fields {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 0.5rem 1.25rem;
-  margin: 0;
-}
+@media (max-width: 700px) {
+  .layout-header,
+  .layout-header nav {
+    align-items: flex-start;
+  }
 
-.application-fields dt {
-  color: #52525b;
-  font-size: 0.925rem;
-  font-weight: 600;
-}
+  .layout-header {
+    flex-direction: column;
+  }
 
-.application-fields dd {
-  margin: 0;
-  overflow-wrap: anywhere;
+  .layout-header nav {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .layout-content {
+    padding: 1.25rem 0;
+  }
+
+  .candidate-fields,
+  .company-fields,
+  .application-fields,
+  .job-fields {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .candidate-fields dt,
+  .company-fields dt,
+  .application-fields dt,
+  .job-fields dt {
+    margin-top: 0.5rem;
+  }
 }

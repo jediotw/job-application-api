@@ -7,6 +7,9 @@ export default defineConfig({
     proxy: {
       '/auth': 'http://localhost:8080',
       '/candidates': 'http://localhost:8080',
+      '/companies': 'http://localhost:8080',
+      '/jobs': 'http://localhost:8080',
+      '/applications': 'http://localhost:8080',
     },
   },
 })

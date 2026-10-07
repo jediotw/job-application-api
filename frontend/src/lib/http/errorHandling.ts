@@ -44,29 +44,58 @@ export function toApiErrorInfo(error: unknown, fallback = 'Something went wrong.
     const responseMessage = bodyMessage(error.body)
 
     if (error.status === 400 || error.status === 422) {
-      return { kind: 'validation', message: responseMessage ?? 'Please correct the highlighted fields.', fieldErrors }
+      return {
+        kind: 'validation',
+        message: responseMessage ?? 'Please correct the highlighted fields.',
+        fieldErrors,
+      }
     }
     if (error.status === 401) {
-      return { kind: 'unauthorized', message: 'Your session has expired. Please sign in again.', fieldErrors }
+      return {
+        kind: 'unauthorized',
+        message: 'Your session has expired. Please sign in again.',
+        fieldErrors,
+      }
     }
     if (error.status === 403) {
-      return { kind: 'forbidden', message: responseMessage ?? 'You do not have permission to perform this action.', fieldErrors }
+      return {
+        kind: 'forbidden',
+        message: responseMessage ?? 'You do not have permission to perform this action.',
+        fieldErrors,
+      }
     }
     if (error.status === 404) {
-      return { kind: 'not-found', message: responseMessage ?? 'The requested resource was not found.', fieldErrors }
+      return {
+        kind: 'not-found',
+        message: responseMessage ?? 'The requested resource was not found.',
+        fieldErrors,
+      }
     }
     if (error.status === 409) {
-      return { kind: 'conflict', message: responseMessage ?? 'This request conflicts with existing data.', fieldErrors }
+      return {
+        kind: 'conflict',
+        message: responseMessage ?? 'This request conflicts with existing data.',
+        fieldErrors,
+      }
     }
     if (error.status >= 500) {
       return { kind: 'server', message: 'Something went wrong.', fieldErrors, requestId: error.requestId }
     }
 
-    return { kind: 'unknown', message: responseMessage ?? fallback, fieldErrors, requestId: error.requestId }
+    return {
+      kind: 'unknown',
+      message: responseMessage ?? fallback,
+      fieldErrors,
+      requestId: error.requestId,
+    }
   }
 
   if (error instanceof TypeError) {
-    return { kind: 'network', message: 'The backend is unavailable. Check your connection and try again.', fieldErrors: {} }
+    return {
+      kind: 'network',
+      message: 'The backend is unavailable. Check your connection and try again.',
+      fieldErrors: {},
+    }
   }
 
   return { kind: 'unknown', message: fallback, fieldErrors: {} }
@@ -75,7 +104,7 @@ export function toApiErrorInfo(error: unknown, fallback = 'Something went wrong.
 export function formatApiErrorMessage(error: unknown, fallback?: string): string {
   const info = toApiErrorInfo(error, fallback)
   if (info.kind === 'server' && info.requestId) {
-    return `Something went wrong.\\n\\nRequest ID: ${info.requestId}\\nPlease provide this ID when reporting the problem.`
+    return `Something went wrong.\n\nRequest ID: ${info.requestId}\nPlease provide this ID when reporting the problem.`
   }
   return info.message
 }

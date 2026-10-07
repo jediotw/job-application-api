@@ -6,4 +6,6 @@ export { generateRequestId } from './requestId'
 import { HttpClient } from './client'
 
 export const apiClient = new HttpClient()
-\nexport { formatApiErrorMessage, toApiErrorInfo } from './errorHandling'\nexport type { ApiErrorInfo, ApiErrorKind } from './errorHandling'\n
+
+export { formatApiErrorMessage, toApiErrorInfo } from './errorHandling'
+export type { ApiErrorInfo, ApiErrorKind } from './errorHandling'

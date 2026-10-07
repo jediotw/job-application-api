@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createApplication, getApplication, listApplications } from '../api'
+import { createApplication, getApplication, listApplications, updateApplication } from '../api'
 import { toApplicationErrorMessage } from '../errors'
-import type { Application, CreateApplicationRequest } from '../types'
+import type { Application, CreateApplicationRequest, UpdateApplicationRequest } from '../types'
 
 export interface UseApplicationsResult {
   applications: Application[]
@@ -10,6 +10,7 @@ export interface UseApplicationsResult {
   reload: () => void
   create: (request: CreateApplicationRequest) => Promise<Application>
   get: (id: number) => Promise<Application>
+  update: (id: number, request: UpdateApplicationRequest) => Promise<Application>
 }
 
 export function useApplications(): UseApplicationsResult {
@@ -50,5 +51,11 @@ export function useApplications(): UseApplicationsResult {
 
   const get = useCallback((id: number) => getApplication(id), [])
 
-  return { applications, loading, error, reload, create, get }
+  const update = useCallback(async (id: number, request: UpdateApplicationRequest) => {
+    const updated = await updateApplication(id, request)
+    setApplications((current) => current.map((item) => (item.id === id ? updated : item)))
+    return updated
+  }, [])
+
+  return { applications, loading, error, reload, create, get, update }
 }

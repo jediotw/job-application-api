@@ -1,15 +1,29 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, Card, EmptyState, Input, Label, Loading } from '../../../components/ui'
+import { Alert, Button, Card, EmptyState, Loading } from '../../../components/ui'
 import { useAuth } from '../../auth'
-import { listJobs } from '../../jobs/api'
-import type { Job } from '../../jobs/types'
 import ApplicationCard from '../components/ApplicationCard'
 import { toApplicationError } from '../errors'
 import { useApplications } from '../hooks/useApplications'
 import type { Application } from '../types'
 
-function ApplicationDetails({ application }: { application: Application }) {
+const APPLICATION_STATUSES = ['APPLIED', 'SHORTLISTED'] as const
+
+function ApplicationDetails({
+  application,
+  recruiter,
+  status,
+  updating,
+  onStatusChange,
+  onUpdate,
+}: {
+  application: Application
+  recruiter: boolean
+  status: string
+  updating: boolean
+  onStatusChange: (status: string) => void
+  onUpdate: () => void
+}) {
   return (
     <Card title={`Application #${application.id}`}>
       <dl className="application-fields">
@@ -20,6 +34,30 @@ function ApplicationDetails({ application }: { application: Application }) {
         <dt>Created</dt><dd>{application.createdAt ?? '—'}</dd>
         <dt>Updated</dt><dd>{application.updatedAt ?? '—'}</dd>
       </dl>
+      {recruiter ? (
+        <div className="form-actions">
+          <div>
+            <label htmlFor="application-status">Status</label>
+            <select
+              id="application-status"
+              className="ui-input"
+              value={status}
+              onChange={(event) => onStatusChange(event.target.value)}
+              disabled={updating}
+            >
+              {APPLICATION_STATUSES.includes(status as (typeof APPLICATION_STATUSES)[number]) ? null : (
+                <option value={status}>{status}</option>
+              )}
+              {APPLICATION_STATUSES.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+          <Button onClick={onUpdate} disabled={updating || status === application.status}>
+            {updating ? 'Updating…' : 'Update status'}
+          </Button>
+        </div>
+      ) : null}
       <div className="page-actions"><Link to="/applications">Back to applications</Link></div>
     </Card>
   )
@@ -28,33 +66,15 @@ function ApplicationDetails({ application }: { application: Application }) {
 function ApplicationsPage() {
   const { user } = useAuth()
   const { id } = useParams()
-  const { applications, loading, error, reload, create, get } = useApplications()
-  const isCandidate = user?.role === 'CANDIDATE'
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [jobsLoading, setJobsLoading] = useState(isCandidate)
-  const [jobsError, setJobsError] = useState<string | null>(null)
+  const isRecruiter = user?.role === 'RECRUITER'
+  const { applications, loading, error, reload, get, update } = useApplications()
   const [status, setStatus] = useState('')
-  const [fieldError, setFieldError] = useState<string | null>(null)
+  const [updating, setUpdating] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!isCandidate) return
-    let cancelled = false
-    setJobsLoading(true)
-    setJobsError(null)
-    listJobs()
-      .then((result) => { if (!cancelled) setJobs(result) })
-      .catch((err: unknown) => {
-        if (!cancelled) setJobsError(toApplicationError(err, 'Unable to load jobs.').message)
-      })
-      .finally(() => { if (!cancelled) setJobsLoading(false) })
-    return () => { cancelled = true }
-  }, [isCandidate])
 
   useEffect(() => {
     if (!id) {
@@ -72,44 +92,36 @@ function ApplicationsPage() {
     setDetailLoading(true)
     setDetailError(null)
     get(applicationId)
-      .then((result) => { if (!cancelled) setSelectedApplication(result) })
+      .then((result) => {
+        if (!cancelled) {
+          setSelectedApplication(result)
+          setStatus(result.status)
+        }
+      })
       .catch((err: unknown) => {
         if (!cancelled) setDetailError(toApplicationError(err, 'Unable to load the application.').message)
       })
-      .finally(() => { if (!cancelled) setDetailLoading(false) })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false)
+      })
     return () => { cancelled = true }
   }, [get, id])
 
-  function handleApply(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setFieldError(null)
+  async function handleUpdate() {
+    if (!selectedApplication) return
     setActionError(null)
     setNotice(null)
-
-    const form = new FormData(event.currentTarget)
-    const jobId = Number(form.get('jobId'))
-    if (!Number.isInteger(jobId) || jobId <= 0) {
-      setFieldError('Select a job.')
-      return
+    setUpdating(true)
+    try {
+      const updated = await update(selectedApplication.id, { status })
+      setSelectedApplication(updated)
+      setStatus(updated.status)
+      setNotice('Application status updated successfully.')
+    } catch (err: unknown) {
+      setActionError(toApplicationError(err, 'Unable to update the application status.').message)
+    } finally {
+      setUpdating(false)
     }
-    if (!status.trim()) {
-      setFieldError('Status is required by the application API.')
-      return
-    }
-
-    setSubmitting(true)
-    create({ jobId, status: status.trim() })
-      .then(() => {
-        setStatus('')
-        event.currentTarget.reset()
-        setNotice('Application submitted successfully.')
-      })
-      .catch((err: unknown) => {
-        const info = toApplicationError(err, 'Unable to submit the application.')
-        setActionError(info.message)
-        setFieldError(info.fieldErrors.status ?? null)
-      })
-      .finally(() => setSubmitting(false))
   }
 
   if (id) {
@@ -123,7 +135,18 @@ function ApplicationsPage() {
             <div className="page-actions"><Link to="/applications">Back to applications</Link></div>
           </>
         ) : null}
-        {!detailLoading && !detailError && selectedApplication ? <ApplicationDetails application={selectedApplication} /> : null}
+        {actionError ? <Alert variant="error" title="Application update failed">{actionError}</Alert> : null}
+        {notice ? <Alert variant="success" title="Success">{notice}</Alert> : null}
+        {!detailLoading && !detailError && selectedApplication ? (
+          <ApplicationDetails
+            application={selectedApplication}
+            recruiter={isRecruiter}
+            status={status}
+            updating={updating}
+            onStatusChange={setStatus}
+            onUpdate={() => void handleUpdate()}
+          />
+        ) : null}
       </section>
     )
   }
@@ -144,43 +167,11 @@ function ApplicationsPage() {
 
   return (
     <section>
-      <h1>{isCandidate ? 'My applications' : 'Applications'}</h1>
-      {notice ? <Alert variant="success" title="Success">{notice}</Alert> : null}
-      {actionError ? <Alert variant="error" title="Application failed">{actionError}</Alert> : null}
-
-      {isCandidate ? (
-        <Card title="Apply for a job">
-          {jobsLoading ? <Loading label="Loading available jobs…" /> : null}
-          {jobsError ? <Alert variant="error" title="Unable to load jobs">{jobsError}</Alert> : null}
-          {!jobsLoading && !jobsError && jobs.length === 0 ? (
-            <EmptyState title="No jobs available" message="There are no jobs available to apply for." />
-          ) : null}
-          {!jobsLoading && !jobsError && jobs.length > 0 ? (
-            <form className="auth-form" onSubmit={handleApply}>
-              <div>
-                <Label htmlFor="application-job">Job</Label>
-                <select id="application-job" name="jobId" className="ui-input" defaultValue="">
-                  <option value="" disabled>Select a job</option>
-                  {jobs.map((job) => <option key={job.id} value={job.id}>#{job.id} — {job.title}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="application-status">Status</Label>
-                <Input id="application-status" value={status} onChange={(event) => setStatus(event.target.value)} aria-invalid={fieldError !== null} />
-                {fieldError ? <p className="field-error">{fieldError}</p> : null}
-              </div>
-              <div className="form-actions">
-                <Button type="submit" disabled={submitting}>{submitting ? 'Submitting…' : 'Apply'}</Button>
-              </div>
-            </form>
-          ) : null}
-        </Card>
-      ) : null}
-
+      <h1>{isRecruiter ? 'Applications' : 'My applications'}</h1>
       {applications.length === 0 ? (
         <EmptyState
           title="No applications"
-          message={isCandidate ? 'Your submitted applications will appear here.' : 'Applications for your owned jobs and companies will appear here.'}
+          message={isRecruiter ? 'Applications for your owned jobs and companies will appear here.' : 'Your submitted applications will appear here.'}
         />
       ) : applications.map((application) => <ApplicationCard key={application.id} application={application} />)}
     </section>

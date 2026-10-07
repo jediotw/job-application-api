@@ -5,7 +5,7 @@ import { useAuth } from '../AuthContext'
 import { toAuthErrorMessage } from '../errors'
 
 function RegisterPage() {
-  const { register } = useAuth()
+  const { register, login } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,7 +19,8 @@ function RegisterPage() {
 
     try {
       await register({ email, password })
-      navigate('/login', { replace: true, state: { registered: true } })
+      await login({ email, password })
+      navigate('/profile', { replace: true })
     } catch (err) {
       setError(toAuthErrorMessage(err, 'Unable to create the account. Please try again.'))
     } finally {

@@ -13,6 +13,7 @@ function AppLayout() {
           {isAuthenticated ? (
             <>
               <Link to="/dashboard">Dashboard</Link>
+              <Link to="/jobs">Jobs</Link>
               {user?.role === 'RECRUITER' ? <Link to="/companies">Companies</Link> : null}
               <Link to="/applications">Applications</Link>
               {user?.role === 'CANDIDATE' ? <Link to="/profile">Profile</Link> : null}

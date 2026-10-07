@@ -7,6 +7,7 @@ import RegisterPage from '../../features/auth/pages/RegisterPage'
 import CandidateProfilePage from '../../features/candidates/pages/CandidateProfilePage'
 import CompaniesPage from '../../features/companies/pages/CompaniesPage'
 import ApplicationsPage from '../../features/applications/pages/ApplicationsPage'
+import JobsPage from '../../features/jobs/pages/JobsPage'
 import DashboardPage from './pages/DashboardPage'
 import NotFoundPage from './pages/NotFoundPage'
 
@@ -47,6 +48,14 @@ function AppRouter() {
                 <CandidateProfilePage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/jobs/:id"
+            element={<ProtectedRoute><JobsPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/jobs"
+            element={<ProtectedRoute><JobsPage /></ProtectedRoute>}
           />
           <Route
             path="/applications/:id"

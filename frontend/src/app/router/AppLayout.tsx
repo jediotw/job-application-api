@@ -10,12 +10,12 @@ function AppLayout() {
       <header className="layout-header">
         <Link to="/dashboard">Job Application Platform</Link>
         <nav>
-          <Link to="/dashboard">Dashboard</Link>
           {isAuthenticated ? (
             <>
-              <Link to="/companies">Companies</Link>
+              <Link to="/dashboard">Dashboard</Link>
+              {user?.role === 'RECRUITER' ? <Link to="/companies">Companies</Link> : null}
               <Link to="/applications">Applications</Link>
-              <Link to="/profile">Profile</Link>
+              {user?.role === 'CANDIDATE' ? <Link to="/profile">Profile</Link> : null}
               <span className="layout-user">{user?.email}</span>
               <Button variant="ghost" size="sm" onClick={logout}>
                 Logout

@@ -189,3 +189,8 @@ a:hover { color: var(--hr-blue-dark); }
 .dashboard-stat:hover { border-color: #cbd9eb; background: #fcfdff; }
 .dashboard-stat__label { color: #8290a4; font-size: .7rem; font-weight: 750; letter-spacing: .075em; text-transform: uppercase; }
 .dashboard-stat strong { color: var(--hr-navy); font-size: 1.8rem; line-height: 1; letter-spacing: -.04em; }
+
+@media (max-width: 640px) {
+  .dashboard-stats { grid-template-columns: 1fr; }
+  .dashboard-stat { min-height: 88px; }
+}

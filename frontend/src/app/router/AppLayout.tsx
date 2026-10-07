@@ -1,6 +1,10 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { Button } from '../../components/ui'
 import { useAuth } from '../../features/auth'
+
+function navClass({ isActive }: { isActive: boolean }) {
+  return 'layout-nav-link' + (isActive ? ' layout-nav-link--active' : '')
+}
 
 function AppLayout() {
   const { user, isAuthenticated, logout } = useAuth()
@@ -12,20 +16,18 @@ function AppLayout() {
         <nav>
           {isAuthenticated ? (
             <>
-              <Link to="/dashboard">Dashboard</Link>
-              <Link to="/jobs">Jobs</Link>
-              {user?.role === 'RECRUITER' ? <Link to="/companies">Companies</Link> : null}
-              <Link to="/applications">Applications</Link>
-              {user?.role === 'CANDIDATE' ? <Link to="/profile">Profile</Link> : null}
+              <NavLink className={navClass} to="/dashboard">Dashboard</NavLink>
+              <NavLink className={navClass} to="/jobs">Jobs</NavLink>
+              {user?.role === 'RECRUITER' ? <NavLink className={navClass} to="/companies">Companies</NavLink> : null}
+              <NavLink className={navClass} to="/applications">Applications</NavLink>
+              {user?.role === 'CANDIDATE' ? <NavLink className={navClass} to="/profile">Profile</NavLink> : null}
               <span className="layout-user">{user?.email}</span>
-              <Button variant="ghost" size="sm" onClick={logout}>
-                Logout
-              </Button>
+              <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
             </>
           ) : (
             <>
-              <Link to="/login">Login</Link>
-              <Link to="/register">Register</Link>
+              <NavLink className={navClass} to="/login">Login</NavLink>
+              <NavLink className={navClass} to="/register">Register</NavLink>
             </>
           )}
         </nav>

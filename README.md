@@ -28,64 +28,8 @@ The core domain consists of:
 
 The ER diagram below reflects the **actual Flyway database schema**. The database currently has five tables: `users`, `candidates`, `companies`, `jobs`, and `applications`.
 
-```mermaid
-erDiagram
-    USERS {
-        BIGINT id PK
-        VARCHAR_255 email UK
-        VARCHAR_255 password_hash
-        VARCHAR_50 role
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
+<img width="1536" height="1024" alt="Job Application API ER Diagram" src="https://github.com/user-attachments/assets/9eada068-3ebb-485a-8195-25cf760c45b4" />
 
-    CANDIDATES {
-        BIGINT id PK
-        VARCHAR_100 name
-        VARCHAR_255 email UK
-        VARCHAR_20 phone
-        VARCHAR_500 resume_url
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-
-    COMPANIES {
-        BIGINT id PK
-        VARCHAR_300 name UK
-        CHAR_21 cin UK
-        VARCHAR_500 website
-        TEXT description
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-
-    JOBS {
-        BIGINT id PK
-        BIGINT company_id FK
-        VARCHAR_300 title
-        TEXT description
-        VARCHAR_200 location
-        VARCHAR_50 employment_type
-        NUMERIC_12_2 salary_min
-        NUMERIC_12_2 salary_max
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-
-    APPLICATIONS {
-        BIGINT id PK
-        BIGINT candidate_id FK
-        BIGINT job_id FK
-        VARCHAR_50 status
-        TIMESTAMP applied_at
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-
-    COMPANIES ||--o{ JOBS : "has"
-    CANDIDATES ||--o{ APPLICATIONS : "submits"
-    JOBS ||--o{ APPLICATIONS : "receives"
-```
 
 ### Database relationship notes
 
@@ -102,112 +46,8 @@ erDiagram
 
 This UML view represents the **current Java domain model and application layers**. It intentionally distinguishes application-level references from database foreign keys.
 
-```mermaid
-classDiagram
+<img width="1536" height="1024" alt="Job Application API UML Diagram" src="https://github.com/user-attachments/assets/4792ab07-2242-4cbb-91c3-34e32fc0173f" />
 
-    namespace domain {
-        class User {
-            -Long id
-            -String email
-            -String passwordHash
-            -String role
-            -LocalDateTime createdAt
-            -LocalDateTime updatedAt
-        }
-
-        class Candidate {
-            -Long id
-            -Long userId
-            -String name
-            -String email
-            -String phone
-            -String resumeUrl
-            -LocalDateTime createdAt
-            -LocalDateTime updatedAt
-        }
-
-        class Company {
-            -Long id
-            -String name
-            -String cin
-            -String website
-            -String description
-            -Long recruiterId
-            -LocalDateTime createdAt
-            -LocalDateTime updatedAt
-        }
-
-        class Job {
-            -Long id
-            -Long companyId
-            -String title
-            -String description
-            -String location
-            -String employmentType
-            -BigDecimal salaryMin
-            -BigDecimal salaryMax
-            -LocalDateTime createdAt
-            -LocalDateTime updatedAt
-        }
-
-        class Application {
-            -Long id
-            -Long candidateId
-            -Long jobId
-            -String status
-            -LocalDateTime appliedAt
-            -LocalDateTime createdAt
-            -LocalDateTime updatedAt
-        }
-    }
-
-    namespace service {
-        class UserService
-        class CandidateService
-        class CompanyService
-        class JobService
-        class ApplicationService
-    }
-
-    namespace repository {
-        class UserRepository
-        class CandidateRepository
-        class CompanyRepository
-        class JobRepository
-        class ApplicationRepository
-    }
-
-    namespace controller {
-        class AuthController
-        class CandidateController
-        class CompanyController
-        class JobController
-        class ApplicationController
-    }
-
-    Candidate ..> User : userId (logical reference)
-    Company ..> User : recruiterId (logical reference)
-    Company "1" --> "0..*" Job : companyId
-    Candidate "1" --> "0..*" Application : candidateId
-    Job "1" --> "0..*" Application : jobId
-
-    AuthController --> UserService
-    CandidateController --> CandidateService
-    CompanyController --> CompanyService
-    JobController --> JobService
-    ApplicationController --> ApplicationService
-
-    UserService --> UserRepository
-    CandidateService --> CandidateRepository
-    CandidateService --> UserService
-    CompanyService --> CompanyRepository
-    CompanyService --> UserService
-    JobService --> JobRepository
-    JobService --> CompanyRepository
-    ApplicationService --> ApplicationRepository
-    ApplicationService --> CandidateRepository
-    ApplicationService --> CompanyRepository
-```
 
 ### Layering
 

@@ -27,7 +27,7 @@ function JobCard({
       : 'Not specified'
 
   return (
-    <Card title={job.title}>
+    <Card className="job-card" title={job.title}>
       <dl className="job-fields">
         <dt>Job ID</dt><dd>{job.id}</dd>
         <dt>Company ID</dt><dd>{job.companyId}</dd>

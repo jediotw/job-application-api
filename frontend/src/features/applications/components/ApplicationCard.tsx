@@ -11,6 +11,8 @@ interface ApplicationCardProps {
 }
 
 function ApplicationCard({ application, job, company }: ApplicationCardProps) {
+  const statusClass = application.status.toLowerCase().replace(/\s+/g, '-')
+
   return (
     <Card title={job?.title ?? `Application #${application.id}`}>
       <dl className="application-fields">
@@ -23,7 +25,7 @@ function ApplicationCard({ application, job, company }: ApplicationCardProps) {
           </>
         ) : null}
         <dt>Status</dt>
-        <dd>{application.status}</dd>
+        <dd><span className={`status-badge status-badge--${statusClass}`}>{application.status}</span></dd>
         <dt>Applied</dt>
         <dd>{application.appliedAt}</dd>
       </dl>

@@ -4,6 +4,7 @@ import PublicRoute from './PublicRoute'
 import ProtectedRoute from './ProtectedRoute'
 import LoginPage from '../../features/auth/pages/LoginPage'
 import RegisterPage from '../../features/auth/pages/RegisterPage'
+import CompaniesPage from '../../features/companies/pages/CompaniesPage'
 import DashboardPage from './pages/DashboardPage'
 import NotFoundPage from './pages/NotFoundPage'
 
@@ -34,6 +35,14 @@ function AppRouter() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/companies"
+            element={
+              <ProtectedRoute>
+                <CompaniesPage />
               </ProtectedRoute>
             }
           />

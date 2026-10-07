@@ -37,7 +37,7 @@ function ApplicationDetails({
       <dl className="application-fields">
         <dt>Job</dt><dd>{job?.title ?? `Job #${application.jobId}`}</dd>
         {company ? <><dt>Company</dt><dd>{company.name}</dd></> : null}
-        <dt>Status</dt><dd>{application.status}</dd>
+        <dt>Status</dt><dd><span className={`status-badge status-badge--${application.status.toLowerCase().replace(/\\s+/g, '-')}`}>{application.status}</span></dd>
         <dt>Applied</dt><dd>{application.appliedAt}</dd>
         <dt>Created</dt><dd>{application.createdAt ?? '—'}</dd>
         <dt>Updated</dt><dd>{application.updatedAt ?? '—'}</dd>

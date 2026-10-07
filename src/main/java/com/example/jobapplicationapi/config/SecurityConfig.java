@@ -25,6 +25,7 @@ public class SecurityConfig {
       HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
 
     http.csrf(csrf -> csrf.disable())
+        .cors(cors -> {})
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(

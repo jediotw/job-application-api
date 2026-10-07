@@ -10,9 +10,9 @@ function AppLayout() {
       <header className="layout-header">
         <Link to="/dashboard">Job Application Platform</Link>
         <nav>
-          <Link to="/dashboard">Dashboard</Link>
           {isAuthenticated ? (
             <>
+              <Link to="/dashboard">Dashboard</Link>
               {user?.role === 'RECRUITER' ? <Link to="/companies">Companies</Link> : null}
               <Link to="/applications">Applications</Link>
               {user?.role === 'CANDIDATE' ? <Link to="/profile">Profile</Link> : null}

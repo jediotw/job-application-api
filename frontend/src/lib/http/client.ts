@@ -1,12 +1,21 @@
 import { HttpError } from './errors'
+import { generateRequestId } from './requestId'
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 
 export type QueryParams = Record<string, string | number | boolean | undefined>
 
+export interface ResponseInfo {
+  status: number
+  sentRequestId: string
+  responseRequestId?: string
+}
+
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
   query?: QueryParams
+  requestId?: string
+  onResponse?: (info: ResponseInfo) => void
 }
 
 export class HttpClient {
@@ -39,17 +48,27 @@ export class HttpClient {
   }
 
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const { body, query, headers, ...init } = options
+    const { body, query, headers, requestId, onResponse, ...init } = options
+    const sentRequestId = requestId ?? generateRequestId()
+
     const response = await this.fetchFn(this.buildUrl(path, query), {
       ...init,
-      headers: this.buildHeaders(body, headers),
+      headers: this.buildHeaders(body, headers, sentRequestId),
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     })
+
+    const responseRequestId = response.headers.get('X-Request-ID') ?? undefined
+    onResponse?.({ status: response.status, sentRequestId, responseRequestId })
 
     const data = await this.parseBody(response)
 
     if (!response.ok) {
-      throw new HttpError(response.status, response.statusText, data)
+      throw new HttpError(
+        response.status,
+        response.statusText,
+        data,
+        responseRequestId ?? sentRequestId,
+      )
     }
 
     return data as T
@@ -70,10 +89,13 @@ export class HttpClient {
     return search ? `${url}?${search}` : url
   }
 
-  private buildHeaders(body: unknown, headers?: HeadersInit): Headers {
+  private buildHeaders(body: unknown, headers?: HeadersInit, requestId?: string): Headers {
     const result = new Headers(headers)
 
     if (!result.has('Accept')) result.set('Accept', 'application/json')
+    if (requestId && !result.has('X-Request-ID')) {
+      result.set('X-Request-ID', requestId)
+    }
     if (body !== undefined && !result.has('Content-Type')) {
       result.set('Content-Type', 'application/json')
     }

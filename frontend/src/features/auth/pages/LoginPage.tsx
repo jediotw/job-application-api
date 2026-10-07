@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Input, Label } from '../../../components/ui'
+import { HRiringLogo } from '../../../components/branding/HRiringLogo'
 import { useAuth } from '../AuthContext'
 import { toAuthErrorMessage } from '../errors'
 
@@ -33,8 +34,12 @@ function LoginPage() {
   }
 
   return (
-    <section>
-      <h1>Login</h1>
+    <section className="auth-page">
+      <HRiringLogo to="/login" />
+      <div className="auth-heading">
+        <h1>Welcome back</h1>
+        <p>Sign in to continue to your HRiring workspace.</p>
+      </div>
       <Card title="Sign in">
         {registered ? (
           <Alert variant="success" title="Account created">
@@ -77,6 +82,7 @@ function LoginPage() {
             </Button>
           </div>
         </form>
+        <p className="auth-switch">New to HRiring? <Link to="/register">Create an account</Link></p>
       </Card>
     </section>
   )

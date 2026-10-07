@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Input, Label } from '../../../components/ui'
+import { HRiringLogo } from '../../../components/branding/HRiringLogo'
 import { useAuth } from '../AuthContext'
 import { toAuthErrorMessage } from '../errors'
 
@@ -29,8 +30,12 @@ function RegisterPage() {
   }
 
   return (
-    <section>
-      <h1>Register</h1>
+    <section className="auth-page">
+      <HRiringLogo to="/register" />
+      <div className="auth-heading">
+        <h1>Create your account</h1>
+        <p>Join HRiring and manage your job search in one place.</p>
+      </div>
       <Card title="Create account">
         {error ? (
           <Alert variant="error" title="Registration failed">
@@ -68,6 +73,7 @@ function RegisterPage() {
             </Button>
           </div>
         </form>
+        <p className="auth-switch">Already have an account? <Link to="/login">Sign in</Link></p>
       </Card>
     </section>
   )

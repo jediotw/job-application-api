@@ -2,15 +2,21 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Button, Card, EmptyState, Loading } from '../../../components/ui'
 import { useAuth } from '../../auth'
+import { listCompanies } from '../../companies/api'
+import type { Company } from '../../companies/types'
+import { getJob, listJobs } from '../../jobs/api'
+import type { Job } from '../../jobs/types'
 import ApplicationCard from '../components/ApplicationCard'
 import { toApplicationError } from '../errors'
 import { useApplications } from '../hooks/useApplications'
 import type { Application } from '../types'
 
-const APPLICATION_STATUSES = ['APPLIED', 'SHORTLISTED'] as const
+const APPLICATION_STATUS_OPTIONS = ['SHORTLISTED'] as const
 
 function ApplicationDetails({
   application,
+  job,
+  company,
   recruiter,
   status,
   updating,
@@ -18,6 +24,8 @@ function ApplicationDetails({
   onUpdate,
 }: {
   application: Application
+  job?: Job
+  company?: Company
   recruiter: boolean
   status: string
   updating: boolean
@@ -25,14 +33,15 @@ function ApplicationDetails({
   onUpdate: () => void
 }) {
   return (
-    <Card title={`Application #${application.id}`}>
+    <Card title={job?.title ?? `Application #${application.id}`}>
       <dl className="application-fields">
-        <dt>Job ID</dt><dd>{application.jobId}</dd>
-        <dt>Candidate ID</dt><dd>{application.candidateId}</dd>
+        <dt>Job</dt><dd>{job?.title ?? `Job #${application.jobId}`}</dd>
+        {company ? <><dt>Company</dt><dd>{company.name}</dd></> : null}
         <dt>Status</dt><dd>{application.status}</dd>
         <dt>Applied</dt><dd>{application.appliedAt}</dd>
         <dt>Created</dt><dd>{application.createdAt ?? '—'}</dd>
         <dt>Updated</dt><dd>{application.updatedAt ?? '—'}</dd>
+        {recruiter ? <><dt>Candidate</dt><dd>Candidate #{application.candidateId}</dd></> : null}
       </dl>
       {recruiter ? (
         <div className="form-actions">
@@ -45,10 +54,8 @@ function ApplicationDetails({
               onChange={(event) => onStatusChange(event.target.value)}
               disabled={updating}
             >
-              {APPLICATION_STATUSES.includes(status as (typeof APPLICATION_STATUSES)[number]) ? null : (
-                <option value={status}>{status}</option>
-              )}
-              {APPLICATION_STATUSES.map((option) => (
+              {status !== application.status ? <option value={status}>{status}</option> : null}
+              {APPLICATION_STATUS_OPTIONS.map((option) => (
                 <option key={option} value={option}>{option}</option>
               ))}
             </select>
@@ -75,6 +82,34 @@ function ApplicationsPage() {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [relatedLoading, setRelatedLoading] = useState(true)
+  const [relatedError, setRelatedError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setRelatedLoading(true)
+    setRelatedError(null)
+
+    Promise.all([listJobs(), listCompanies()])
+      .then(([jobResult, companyResult]) => {
+        if (cancelled) return
+        setJobs(jobResult)
+        setCompanies(companyResult)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setRelatedError(toApplicationError(err, 'Unable to load job and company information.').message)
+      })
+      .finally(() => {
+        if (!cancelled) setRelatedLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [])
+
+  const jobById = new Map(jobs.map((job) => [job.id, job]))
+  const companyById = new Map(companies.map((company) => [company.id, company]))
 
   useEffect(() => {
     if (!id) {
@@ -125,21 +160,27 @@ function ApplicationsPage() {
   }
 
   if (id) {
+    const job = selectedApplication ? jobById.get(selectedApplication.jobId) : undefined
+    const company = job ? companyById.get(job.companyId) : undefined
+
     return (
       <section>
         <h1>Application details</h1>
-        {detailLoading ? <Loading label="Loading application…" /> : null}
+        {detailLoading || relatedLoading ? <Loading label="Loading application…" /> : null}
         {detailError ? (
           <>
             <Alert variant="error" title="Unable to load application">{detailError}</Alert>
             <div className="page-actions"><Link to="/applications">Back to applications</Link></div>
           </>
         ) : null}
+        {relatedError ? <Alert variant="error" title="Unable to load job details">{relatedError}</Alert> : null}
         {actionError ? <Alert variant="error" title="Application update failed">{actionError}</Alert> : null}
         {notice ? <Alert variant="success" title="Success">{notice}</Alert> : null}
-        {!detailLoading && !detailError && selectedApplication ? (
+        {!detailLoading && !relatedLoading && !detailError && selectedApplication ? (
           <ApplicationDetails
             application={selectedApplication}
+            job={job}
+            company={company}
             recruiter={isRecruiter}
             status={status}
             updating={updating}
@@ -151,29 +192,42 @@ function ApplicationsPage() {
     )
   }
 
-  if (loading) {
-    return <section><h1>Applications</h1><Loading label="Loading applications…" /></section>
+  if (loading || relatedLoading) {
+    return <section><h1>{isRecruiter ? 'Applications' : 'My Applications'}</h1><Loading label="Loading applications…" /></section>
   }
 
   if (error) {
     return (
       <section>
-        <h1>Applications</h1>
+        <h1>{isRecruiter ? 'Applications' : 'My Applications'}</h1>
         <Alert variant="error" title="Unable to load applications">{error}</Alert>
         <div className="page-actions"><Button variant="secondary" onClick={reload}>Try again</Button></div>
       </section>
     )
   }
 
+  if (relatedError) {
+    return (
+      <section>
+        <h1>{isRecruiter ? 'Applications' : 'My Applications'}</h1>
+        <Alert variant="error" title="Unable to load job details">{relatedError}</Alert>
+      </section>
+    )
+  }
+
   return (
     <section>
-      <h1>{isRecruiter ? 'Applications' : 'My applications'}</h1>
+      <h1>{isRecruiter ? 'Applications' : 'My Applications'}</h1>
       {applications.length === 0 ? (
         <EmptyState
           title="No applications"
           message={isRecruiter ? 'Applications for your owned jobs and companies will appear here.' : 'Your submitted applications will appear here.'}
         />
-      ) : applications.map((application) => <ApplicationCard key={application.id} application={application} />)}
+      ) : applications.map((application) => {
+        const job = jobById.get(application.jobId)
+        const company = job ? companyById.get(job.companyId) : undefined
+        return <ApplicationCard key={application.id} application={application} job={job} company={company} />
+      })}
     </section>
   )
 }

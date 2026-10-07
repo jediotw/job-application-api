@@ -111,3 +111,21 @@ a {
 .page-actions + .ui-card {
   margin-top: 1rem;
 }
+
+.application-fields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+}
+
+.application-fields dt {
+  color: #52525b;
+  font-size: 0.925rem;
+  font-weight: 600;
+}
+
+.application-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

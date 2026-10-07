@@ -14,6 +14,7 @@ function AppLayout() {
           {isAuthenticated ? (
             <>
               <Link to="/companies">Companies</Link>
+              <Link to="/applications">Applications</Link>
               <Link to="/profile">Profile</Link>
               <span className="layout-user">{user?.email}</span>
               <Button variant="ghost" size="sm" onClick={logout}>

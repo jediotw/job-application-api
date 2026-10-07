@@ -1,4 +1,5 @@
-import Alert from './Alert'\nimport Button from './Button'
+import Alert from './Alert'
+import Button from './Button'
 import type { ApiErrorInfo } from '../../lib/http'
 
 interface ApiErrorStateProps {

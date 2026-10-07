@@ -165,6 +165,8 @@ function JobsPage() {
   }
 
   if (id) {
+    const selectedJobIsOwned = !isRecruiter || recruiterCompanyIds.has(selectedJob?.companyId ?? -1)
+
     return (
       <section>
         <h1>Job details</h1>
@@ -181,14 +183,14 @@ function JobsPage() {
             {formError ? <Alert variant="error" title="Application failed">{formError}</Alert> : null}
             <JobCard
               job={selectedJob}
-              recruiter={isRecruiter}
+              recruiter={isRecruiter && selectedJobIsOwned}
               onApply={!isRecruiter ? () => void handleApply(selectedJob.id) : undefined}
               applying={applyingJobId === selectedJob.id}
-              onEdit={isRecruiter ? () => startEdit(selectedJob) : undefined}
-              onDelete={isRecruiter ? () => void handleDelete(selectedJob) : undefined}
+              onEdit={isRecruiter && selectedJobIsOwned ? () => startEdit(selectedJob) : undefined}
+              onDelete={isRecruiter && selectedJobIsOwned ? () => void handleDelete(selectedJob) : undefined}
               deleting={deletingId === selectedJob.id}
             />
-            {isRecruiter && editingJob?.id === selectedJob.id ? (
+            {isRecruiter && selectedJobIsOwned && editingJob?.id === selectedJob.id ? (
               <Card title="Edit job">
                 {companiesLoading ? <Loading label="Loading your companies…" /> : null}
                 {companiesError ? <ApiErrorState error={toJobError(companiesError, 'Unable to load your companies.')} /> : null}

@@ -62,6 +62,8 @@ function JobsPage() {
     }
   }, [isRecruiter, user])
 
+  const recruiterCompanyIds = new Set(companies.map((company) => company.id))
+
   useEffect(() => {
     if (!id) {
       setSelectedJob(null)

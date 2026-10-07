@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">HRiring</title>
+  <desc id="desc">Two people connected together, the HRiring brand mark.</desc>
+  <circle cx="74" cy="63" r="18" fill="#1f5eea"/>
+  <circle cx="166" cy="63" r="18" fill="#123b8f"/>
+  <path fill="#1f5eea" d="M38 156v-29c0-24 13-40 34-40 13 0 21 6 31 15l15 14c4 4 7 5 10 5v29c-9 0-15-3-22-10l-16-15c-5-5-10-7-15-7-9 0-13 8-13 20v18H38Z"/>
+  <path fill="#123b8f" d="M218 156v-29c0-24-13-40-34-40-13 0-21 6-31 15l-15 14c-4 4-7 5-10 5v29c9 0 15-3 22-10l16-15c5-5 10-7 15-7 9 0 13 8 13 20v18h24Z"/>
+</svg>

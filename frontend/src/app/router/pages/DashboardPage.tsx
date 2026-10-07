@@ -97,7 +97,26 @@ function DashboardPage() {
 
   return (
     <section>
-      <h1>Dashboard</h1>
+      <div className="dashboard-heading">
+        <div>
+          <h1>Dashboard</h1>
+          <p>{isRecruiter ? 'Manage your hiring workspace from one place.' : 'Keep track of jobs, applications, and your profile.'}</p>
+        </div>
+      </div>
+      <div className="dashboard-stats" aria-label="Workspace summary">
+        <Link className="dashboard-stat" to="/jobs">
+          <span className="dashboard-stat__label">{isRecruiter ? 'My jobs' : 'Available jobs'}</span>
+          <strong>{visibleJobs.length}</strong>
+        </Link>
+        <Link className="dashboard-stat" to="/applications">
+          <span className="dashboard-stat__label">Applications</span>
+          <strong>{applications.length}</strong>
+        </Link>
+        <Link className="dashboard-stat" to={isRecruiter ? '/companies' : '/profile'}>
+          <span className="dashboard-stat__label">{isRecruiter ? 'Companies' : 'Profile'}</span>
+          <strong>{isRecruiter ? recruiterCompanies.length : profiles.length}</strong>
+        </Link>
+      </div>
       {applicationNotice ? <Alert variant="success" title="Success">{applicationNotice}</Alert> : null}
       {applicationError ? <Alert variant="error" title="Application failed">{applicationError}</Alert> : null}
 

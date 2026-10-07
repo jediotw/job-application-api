@@ -1,0 +1,6 @@
+jwt:
+  secret: test-secret-key-that-is-at-least-32-bytes-long
+
+spring:
+  datasource:
+    password: mysecretpassword

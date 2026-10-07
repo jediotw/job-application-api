@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { login as loginRequest, register as registerRequest } from './api'
+import { apiClient } from '../../lib/http'
 import { clearStoredToken, readStoredToken, readStoredUser, storeToken } from './session'
 import type { AuthUser, LoginRequest, LoginResponse, RegisterRequest, UserResponse } from './types'
 
@@ -40,6 +41,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setToken(null)
     setUser(null)
   }, [])
+
+  useEffect(() => {
+    apiClient.setUnauthorizedHandler(logout)
+    return () => apiClient.setUnauthorizedHandler(null)
+  }, [logout])
 
   const value = useMemo<AuthContextValue>(
     () => ({

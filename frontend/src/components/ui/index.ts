@@ -10,3 +10,4 @@ export { default as Alert } from './Alert'
 export type { AlertVariant } from './Alert'
 export { default as Loading } from './Loading'
 export { default as EmptyState } from './EmptyState'
+export { default as ApiErrorState } from './ApiErrorState'\n

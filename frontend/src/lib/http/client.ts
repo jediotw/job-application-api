@@ -24,6 +24,7 @@ export class HttpClient {
   private readonly baseUrl: string
   private readonly fetchFn: typeof fetch
   private authTokenProvider: AuthTokenProvider | null = null
+  private unauthorizedHandler: (() => void) | null = null
 
   constructor(baseUrl: string = API_BASE_URL, fetchFn: typeof fetch = globalThis.fetch.bind(globalThis)) {
     this.baseUrl = baseUrl.replace(/\/+$/, '')
@@ -32,6 +33,10 @@ export class HttpClient {
 
   setAuthTokenProvider(provider: AuthTokenProvider | null): void {
     this.authTokenProvider = provider
+  }
+
+  setUnauthorizedHandler(handler: (() => void) | null): void {
+    this.unauthorizedHandler = handler
   }
 
   get<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -70,6 +75,8 @@ export class HttpClient {
     const data = await this.parseBody(response)
 
     if (!response.ok) {
+      if (response.status === 401) this.unauthorizedHandler?.()
+
       throw new HttpError(
         response.status,
         response.statusText,

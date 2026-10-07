@@ -13,9 +13,9 @@ function AppLayout() {
           <Link to="/dashboard">Dashboard</Link>
           {isAuthenticated ? (
             <>
-              <Link to="/companies">Companies</Link>
+              {user?.role === 'RECRUITER' ? <Link to="/companies">Companies</Link> : null}
               <Link to="/applications">Applications</Link>
-              <Link to="/profile">Profile</Link>
+              {user?.role === 'CANDIDATE' ? <Link to="/profile">Profile</Link> : null}
               <span className="layout-user">{user?.email}</span>
               <Button variant="ghost" size="sm" onClick={logout}>
                 Logout

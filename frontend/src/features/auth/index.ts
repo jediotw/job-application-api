@@ -1,6 +1,6 @@
 export { AuthProvider, useAuth } from './AuthContext'
 export type { AuthContextValue } from './AuthContext'
-export { isAuthenticated } from './session'
+export { isAuthenticated, readStoredToken } from './session'
 export { login, register } from './api'
 export type {
   AuthUser,

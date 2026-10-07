@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import { AuthProvider } from '../../features/auth'
+import { AuthProvider, readStoredToken } from '../../features/auth'
+import { apiClient } from '../../lib/http'
+
+apiClient.setAuthTokenProvider(readStoredToken)
 
 interface AppProvidersProps {
   children: ReactNode
